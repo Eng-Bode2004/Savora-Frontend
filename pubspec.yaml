@@ -22,7 +22,9 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/logo.png
+    - assets/images/
     - lib/core/localization/en.json
     - lib/core/localization/ar.json
     - lib/core/localization/es.json
+    - lib/core/localization/fr.json
+    - lib/core/localization/zh.json

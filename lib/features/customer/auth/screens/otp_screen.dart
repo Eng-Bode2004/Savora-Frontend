@@ -8,9 +8,10 @@ import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/reveal.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key, required this.phone});
+  const OtpScreen({super.key, required this.phone, this.isDarkMode = true});
 
   final String phone;
+  final bool isDarkMode;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -26,6 +27,12 @@ class _OtpScreenState extends State<OtpScreen>
 
   Timer? _timer;
   int _seconds = 45;
+
+  bool get _isDark => widget.isDarkMode;
+
+  Color get _bgColor => _isDark ? AppColors.espresso : const Color(0xFFFDFBF7);
+  Color get _textColor => _isDark ? AppColors.cream : const Color(0xFF1A1410);
+  Color get _subTextColor => _isDark ? AppColors.creamDim : const Color(0xFF6B6258);
 
   @override
   void initState() {
@@ -70,94 +77,119 @@ class _OtpScreenState extends State<OtpScreen>
     showDialog(
       context: context,
       barrierColor: Colors.black54,
-      builder: (_) => _SuccessDialog(l: l),
+      builder: (_) => _SuccessDialog(l: l, isDark: _isDark),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Scaffold(
-      body: AnimatedBackground(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                _BackButton(onTap: () => Navigator.of(context).pop()),
-                const SizedBox(height: 36),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: _isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: _bgColor,
+        body: _isDark
+            ? AnimatedBackground(
+                child: _buildBody(l),
+              )
+            : _buildBody(l),
+      ),
+    );
+  }
 
-                Reveal(
-                  controller: _entrance,
-                  start: 0.0,
-                  end: 0.6,
-                  child: Text(
-                    l.t('verifyYourNumber'),
-                    style: const TextStyle(
-                      color: AppColors.cream,
-                      fontSize: 30,
-                      height: 1.15,
-                      fontWeight: FontWeight.w700,
+  Widget _buildBody(AppLocalizations l) {
+    return SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    _BackButton(
+                      isDark: _isDark,
+                      onTap: () => Navigator.of(context).pop(),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Reveal(
-                  controller: _entrance,
-                  start: 0.15,
-                  end: 0.7,
-                  child: Text(
-                    '${l.t('enterCode')}${widget.phone}',
-                    style: const TextStyle(
-                      color: AppColors.creamDim,
-                      fontSize: 15,
-                      height: 1.5,
+                    const SizedBox(height: 36),
+
+                    Reveal(
+                      controller: _entrance,
+                      start: 0.0,
+                      end: 0.6,
+                      child: Text(
+                        l.t('verifyYourNumber'),
+                        style: TextStyle(
+                          color: _textColor,
+                          fontSize: 30,
+                          height: 1.15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                Reveal(
-                  controller: _entrance,
-                  start: 0.3,
-                  end: 0.85,
-                  child: _OtpBoxes(
-                    length: _length,
-                    controller: _code,
-                    focusNode: _focus,
-                    onCompleted: (_) {},
-                  ),
-                ),
-                const SizedBox(height: 28),
-
-                Reveal(
-                  controller: _entrance,
-                  start: 0.4,
-                  end: 0.9,
-                  child: Center(
-                    child: _ResendRow(
-                      seconds: _seconds,
-                      onResend: _seconds == 0 ? _startTimer : null,
-                      l: l,
+                    const SizedBox(height: 12),
+                    Reveal(
+                      controller: _entrance,
+                      start: 0.15,
+                      end: 0.7,
+                      child: Text(
+                        '${l.t('enterCode')}${widget.phone}',
+                        style: TextStyle(
+                          color: _subTextColor,
+                          fontSize: 15,
+                          height: 1.5,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                    const SizedBox(height: 40),
 
-                const Spacer(),
+                    Reveal(
+                      controller: _entrance,
+                      start: 0.3,
+                      end: 0.85,
+                      child: _OtpBoxes(
+                        length: _length,
+                        controller: _code,
+                        focusNode: _focus,
+                        isDark: _isDark,
+                        onCompleted: (_) {},
+                      ),
+                    ),
+                    const SizedBox(height: 28),
 
-                Reveal(
-                  controller: _entrance,
-                  start: 0.45,
-                  end: 1.0,
-                  child: PrimaryButton(
-                    label: l.t('verify'),
-                    onPressed: _complete ? _verify : null,
-                  ),
+                    Reveal(
+                      controller: _entrance,
+                      start: 0.4,
+                      end: 0.9,
+                      child: Center(
+                        child: _ResendRow(
+                          seconds: _seconds,
+                          isDark: _isDark,
+                          onResend: _seconds == 0 ? _startTimer : null,
+                          l: l,
+                        ),
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    Reveal(
+                      controller: _entrance,
+                      start: 0.45,
+                      end: 1.0,
+                      child: PrimaryButton(
+                        label: l.t('verify'),
+                        onPressed: _complete ? _verify : null,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
-                const SizedBox(height: 24),
-              ],
+              ),
             ),
           ),
         ),
@@ -171,13 +203,19 @@ class _OtpBoxes extends StatelessWidget {
     required this.length,
     required this.controller,
     required this.focusNode,
+    required this.isDark,
     required this.onCompleted,
   });
 
   final int length;
   final TextEditingController controller;
   final FocusNode focusNode;
+  final bool isDark;
   final ValueChanged<String> onCompleted;
+
+  Color get _boxBg => isDark ? AppColors.glass : const Color(0x0A1A1410);
+  Color get _boxBorder => isDark ? AppColors.glassBorder : const Color(0xFFE8E4DE);
+  Color get _textColor => isDark ? AppColors.cream : const Color(0xFF1A1410);
 
   @override
   Widget build(BuildContext context) {
@@ -199,14 +237,14 @@ class _OtpBoxes extends StatelessWidget {
                 height: 64,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.glass,
+                  color: _boxBg,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: active
                         ? AppColors.saffron
                         : filled
                             ? AppColors.amber.withValues(alpha: 0.6)
-                            : AppColors.glassBorder,
+                            : _boxBorder,
                     width: active ? 1.8 : 1.2,
                   ),
                   boxShadow: active
@@ -221,8 +259,8 @@ class _OtpBoxes extends StatelessWidget {
                 ),
                 child: Text(
                   filled ? text[i] : '',
-                  style: const TextStyle(
-                    color: AppColors.cream,
+                  style: TextStyle(
+                    color: _textColor,
                     fontSize: 26,
                     fontWeight: FontWeight.w700,
                   ),
@@ -258,20 +296,24 @@ class _OtpBoxes extends StatelessWidget {
 class _ResendRow extends StatelessWidget {
   const _ResendRow({
     required this.seconds,
+    required this.isDark,
     required this.onResend,
     required this.l,
   });
 
   final int seconds;
+  final bool isDark;
   final VoidCallback? onResend;
   final AppLocalizations l;
+
+  Color get _muted => isDark ? AppColors.muted : const Color(0xFF8A8073);
 
   @override
   Widget build(BuildContext context) {
     if (seconds > 0) {
       return Text(
         '${l.t('resendIn')}${seconds.toString().padLeft(2, '0')}',
-        style: const TextStyle(color: AppColors.muted, fontSize: 14),
+        style: TextStyle(color: _muted, fontSize: 14),
       );
     }
     return GestureDetector(
@@ -289,8 +331,15 @@ class _ResendRow extends StatelessWidget {
 }
 
 class _SuccessDialog extends StatelessWidget {
-  const _SuccessDialog({required this.l});
+  const _SuccessDialog({required this.l, required this.isDark});
+
   final AppLocalizations l;
+  final bool isDark;
+
+  Color get _bg => isDark ? AppColors.espressoSoft : Colors.white;
+  Color get _text => isDark ? AppColors.cream : const Color(0xFF1A1410);
+  Color get _sub => isDark ? AppColors.creamDim : const Color(0xFF6B6258);
+  Color get _border => isDark ? AppColors.glassBorder : const Color(0xFFE8E4DE);
 
   @override
   Widget build(BuildContext context) {
@@ -306,9 +355,9 @@ class _SuccessDialog extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 40),
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: AppColors.espressoSoft,
+            color: _bg,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: AppColors.glassBorder),
+            border: Border.all(color: _border),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -326,8 +375,8 @@ class _SuccessDialog extends StatelessWidget {
               const SizedBox(height: 22),
               Text(
                 l.t('youreIn'),
-                style: const TextStyle(
-                  color: AppColors.cream,
+                style: TextStyle(
+                  color: _text,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                 ),
@@ -336,7 +385,7 @@ class _SuccessDialog extends StatelessWidget {
               Text(
                 l.t('welcome'),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.creamDim, fontSize: 14),
+                style: TextStyle(color: _sub, fontSize: 14),
               ),
             ],
           ),
@@ -347,8 +396,14 @@ class _SuccessDialog extends StatelessWidget {
 }
 
 class _BackButton extends StatelessWidget {
-  const _BackButton({required this.onTap});
+  const _BackButton({required this.isDark, required this.onTap});
+
+  final bool isDark;
   final VoidCallback onTap;
+
+  Color get _bg => isDark ? AppColors.glass : const Color(0x0A1A1410);
+  Color get _border => isDark ? AppColors.glassBorder : const Color(0xFFE8E4DE);
+  Color get _icon => isDark ? AppColors.cream : const Color(0xFF1A1410);
 
   @override
   Widget build(BuildContext context) {
@@ -358,12 +413,11 @@ class _BackButton extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: AppColors.glass,
+          color: _bg,
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.glassBorder),
+          border: Border.all(color: _border),
         ),
-        child: const Icon(Icons.arrow_back_rounded,
-            color: AppColors.cream, size: 20),
+        child: Icon(Icons.arrow_back_rounded, color: _icon, size: 20),
       ),
     );
   }

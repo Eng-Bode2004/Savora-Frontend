@@ -23,6 +23,15 @@ class AppColors {
   static const Color creamDim = Color(0xFFC9BFB0);
   static const Color muted = Color(0xFF8A8073);
 
+  // --- White theme ---
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color offWhite = Color(0xFFF8F6F2);
+  static const Color warmWhite = Color(0xFFFDFCFA);
+  static const Color darkText = Color(0xFF1A1410);
+  static const Color softText = Color(0xFF6B6258);
+  static const Color lightBorder = Color(0xFFE8E4DE);
+  static const Color lightGlass = Color(0x0A1A1410);
+
   // --- Glass surfaces ---
   static const Color glass = Color(0x14FFFFFF);
   static const Color glassStrong = Color(0x1FFFFFFF);

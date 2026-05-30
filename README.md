@@ -55,7 +55,7 @@ lib/
 │   ├── social_button.dart
 │   └── reveal.dart          # stagger helper + page transition
 └── screens/
-    ├── signup_screen.dart
+    ├── login_screen.dart
     ├── phone_entry_screen.dart
     └── otp_screen.dart
 ```
@@ -63,6 +63,6 @@ lib/
 ## Hooking up real auth later
 Right now the Google/Apple buttons and OTP verification are stubbed. When
 you're ready, drop your backend calls into:
-- `signup_screen.dart` → the `onPressed` of the social buttons
+- `login_screen.dart` → the login action
 - `phone_entry_screen.dart` → `_continue()` (send code request)
 - `otp_screen.dart` → `_verify()` (validate code, then route to home)

@@ -28,11 +28,43 @@ class AppTheme {
     );
   }
 
-  /// Elegant serif wordmark style.
+  /// Light / white theme for onboarding & overall app.
+  static ThemeData get light {
+    final base = ThemeData.light(useMaterial3: true);
+
+    return base.copyWith(
+      scaffoldBackgroundColor: AppColors.warmWhite,
+      colorScheme: base.colorScheme.copyWith(
+        primary: AppColors.saffron,
+        secondary: AppColors.terracotta,
+        surface: AppColors.white,
+        onPrimary: AppColors.white,
+        onSurface: AppColors.darkText,
+      ),
+      textTheme: GoogleFonts.plusJakartaSansTextTheme(base.textTheme).apply(
+        bodyColor: AppColors.darkText,
+        displayColor: AppColors.darkText,
+      ),
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      splashFactory: NoSplash.splashFactory,
+    );
+  }
+
+  /// Elegant serif wordmark style — dark bg version.
   static TextStyle wordmark(double size) => GoogleFonts.playfairDisplay(
         fontSize: size,
         fontWeight: FontWeight.w600,
         color: AppColors.cream,
+        letterSpacing: 0.5,
+        height: 1.0,
+      );
+
+  /// Light wordmark for white/light backgrounds.
+  static TextStyle wordmarkLight(double size) => GoogleFonts.playfairDisplay(
+        fontSize: size,
+        fontWeight: FontWeight.w600,
+        color: AppColors.darkText,
         letterSpacing: 0.5,
         height: 1.0,
       );

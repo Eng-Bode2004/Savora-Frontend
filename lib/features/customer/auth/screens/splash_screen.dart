@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../shared/widgets/animated_background.dart';
 import '../../../../shared/widgets/savora_badge.dart';
 import '../../../../shared/widgets/reveal.dart';
-import 'signup_screen.dart';
+import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -38,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen>
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 700),
-          pageBuilder: (_, __, ___) => const SignupScreen(),
+          pageBuilder: (_, __, ___) => const LoginScreen(),
           transitionsBuilder: (_, animation, __, child) {
             final curved = CurvedAnimation(
                 parent: animation, curve: Curves.easeOutCubic);
@@ -66,58 +65,58 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
-      body: AnimatedBackground(
-        child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Spacer(flex: 2),
+      backgroundColor: AppColors.warmWhite,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 2),
 
-                SizedBox(
-                  width: 320,
-                  height: 320,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      _SonarPulse(controller: _entrance),
-                      _OrbitingFood(
-                        entrance: _entrance,
-                        orbit: _orbit,
-                        radius: 120,
-                      ),
-                      _BadgeReveal(controller: _entrance),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                Reveal(
-                  controller: _entrance,
-                  start: 0.55,
-                  end: 0.85,
-                  child: Text('Savora', style: AppTheme.wordmark(48)),
-                ),
-                const SizedBox(height: 14),
-                Reveal(
-                  controller: _entrance,
-                  start: 0.70,
-                  end: 1.00,
-                  child: Text(
-                    l.t('splashTagline'),
-                    style: const TextStyle(
-                      color: AppColors.creamDim,
-                      fontSize: 15,
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
+              SizedBox(
+                width: 360,
+                height: 360,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    _SonarPulse(controller: _entrance),
+                    _OrbitingFood(
+                      entrance: _entrance,
+                      orbit: _orbit,
+                      radius: 140,
                     ),
+                    _BadgeReveal(controller: _entrance),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 36),
+
+              Reveal(
+                controller: _entrance,
+                start: 0.55,
+                end: 0.85,
+                child: Text('Savora', style: AppTheme.wordmarkLight(52)),
+              ),
+              const SizedBox(height: 18),
+              Reveal(
+                controller: _entrance,
+                start: 0.70,
+                end: 1.00,
+                child: Text(
+                  l.t('splashTagline'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.saffron,
+                    fontSize: 20,
+                    height: 1.4,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
+              ),
 
-                const Spacer(flex: 3),
-              ],
-            ),
+              const Spacer(flex: 3),
+            ],
           ),
         ),
       ),
@@ -175,7 +174,7 @@ class _BadgeReveal extends StatelessWidget {
           ),
         );
       },
-      child: const SavoraBadge(size: 96),
+      child: const SavoraBadge(size: 120),
     );
   }
 }

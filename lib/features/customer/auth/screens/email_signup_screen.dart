@@ -11,65 +11,41 @@ const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
 const _kAccentDark = Color(0xFFD4952E);
 
-final _nameGen = math.Random();
+class EmailSignupScreen extends StatefulWidget {
+  const EmailSignupScreen({super.key, this.isDarkMode = true});
 
-final List<String> _adjectives = [
-  'Chef', 'Foodie', 'Tasty', 'Yummy', 'Spicy', 'Savory', 'Zesty',
-  'Crispy', 'Juicy', 'Toasty', 'Frosty', 'Golden', 'Silky', 'Cozy',
-  'Urban', 'Fresh', 'Wild', 'Sunny', 'Moonlit', 'Stormy',
-];
-
-final List<String> _nouns = [
-  'Kitchen', 'Plate', 'Bowl', 'Spoon', 'Oven', 'Grill', 'Pan',
-  'Feast', 'Savor', 'Morsel', 'Taste', 'Aroma', 'Herb', 'Spice',
-  'Hearth', 'Table', 'Toast', 'Bake', 'Roast', 'Steam',
-];
-
-String generateUsername() {
-  final adj = _adjectives[_nameGen.nextInt(_adjectives.length)];
-  final noun = _nouns[_nameGen.nextInt(_nouns.length)];
-  final num = _nameGen.nextInt(999);
-  return '$adj$noun$num';
-}
-
-class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+  final bool isDarkMode;
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  State<EmailSignupScreen> createState() => _EmailSignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen>
+class _EmailSignupScreenState extends State<EmailSignupScreen>
     with TickerProviderStateMixin {
-  // ── Controllers / focus ──
-  final _usernameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
 
-  final _usernameFocus = FocusNode();
+  final _emailFocus = FocusNode();
   final _nameFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _confirmFocus = FocusNode();
-  final _phoneFocus = FocusNode();
 
-  // ── Animations ──
   late final AnimationController _entrance;
   late final AnimationController _float;
   late final AnimationController _shimmer;
-  late final AnimationController _genSpin;
 
-  // ── State ──
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  late bool _isDarkMode;
   bool _isLoading = false;
   bool _buttonPressed = false;
 
   @override
   void initState() {
     super.initState();
+    _isDarkMode = widget.isDarkMode;
 
     _entrance = AnimationController(
       vsync: this,
@@ -79,9 +55,8 @@ class _SignupScreenState extends State<SignupScreen>
       ..repeat(reverse: true);
     _shimmer = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))
       ..repeat();
-    _genSpin = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
 
-    for (final f in [_usernameFocus, _nameFocus, _passwordFocus, _confirmFocus, _phoneFocus]) {
+    for (final f in [_emailFocus, _nameFocus, _passwordFocus, _confirmFocus]) {
       f.addListener(() => setState(() {}));
     }
     for (final c in [_passwordCtrl, _confirmCtrl]) {
@@ -98,25 +73,15 @@ class _SignupScreenState extends State<SignupScreen>
     _entrance.dispose();
     _float.dispose();
     _shimmer.dispose();
-    _genSpin.dispose();
-    _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _nameCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
-    _phoneCtrl.dispose();
-    _usernameFocus.dispose();
+    _emailFocus.dispose();
     _nameFocus.dispose();
     _passwordFocus.dispose();
     _confirmFocus.dispose();
-    _phoneFocus.dispose();
     super.dispose();
-  }
-
-  // ── Actions ──
-  void _generateUsername() {
-    HapticFeedback.lightImpact();
-    _genSpin.forward(from: 0);
-    setState(() => _usernameCtrl.text = generateUsername());
   }
 
   void _toggleDarkMode() {
@@ -136,7 +101,7 @@ class _SignupScreenState extends State<SignupScreen>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => OtpScreen(phone: _phoneCtrl.text, isDarkMode: _isDarkMode),
+            builder: (_) => OtpScreen(phone: _emailCtrl.text, isDarkMode: _isDarkMode),
           ),
         );
       }
@@ -148,7 +113,6 @@ class _SignupScreenState extends State<SignupScreen>
     Navigator.of(context).pop();
   }
 
-  // ── Animation helpers (staggered reveal) ──
   double _t(double start, double end) {
     final v = _entrance.value.clamp(start, end);
     return ((v - start) / (end - start)).clamp(0.0, 1.0);
@@ -164,7 +128,6 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  // ── Password strength: 0..4 ──
   int get _strength {
     final p = _passwordCtrl.text;
     if (p.isEmpty) return 0;
@@ -179,7 +142,6 @@ class _SignupScreenState extends State<SignupScreen>
   bool get _confirmMatches =>
       _confirmCtrl.text.isNotEmpty && _confirmCtrl.text == _passwordCtrl.text;
 
-  // ── Theme colors — dark mode mirrors OTP exactly ──
   Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
   Color get _bgColor2 => _isDarkMode ? AppColors.espresso : const Color(0xFFF7F4EE);
   Color get _cardColor => _isDarkMode ? AppColors.glass : Colors.white;
@@ -205,7 +167,6 @@ class _SignupScreenState extends State<SignupScreen>
             _buildBackground(),
             if (!_isDarkMode) _FloatingDecor(floatAnim: _float),
             SafeArea(
-              // ★ FIX: listen to _entrance so _reveal() rebuilds while animating.
               child: AnimatedBuilder(
                 animation: _entrance,
                 builder: (context, _) {
@@ -235,13 +196,10 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  // ════════ BACKGROUND ════════
   Widget _buildBackground() {
-    // Dark mode → identical to OTP screen
     if (_isDarkMode) {
       return const AnimatedBackground(child: SizedBox.expand());
     }
-    // Light mode → soft cream with drifting accent orbs
     return Stack(
       children: [
         Container(
@@ -297,7 +255,6 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  // ════════ TOP BAR ════════
   Widget _buildTopBar(AppLocalizations l) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -324,7 +281,6 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  // ════════ HEADER ════════
   Widget _buildHeader(AppLocalizations l) {
     return Column(
       children: [
@@ -351,7 +307,7 @@ class _SignupScreenState extends State<SignupScreen>
                     ),
                   ],
                 ),
-                child: const Center(child: Text('🍲', style: TextStyle(fontSize: 30))),
+                child: const Center(child: Text('📧', style: TextStyle(fontSize: 30))),
               ),
             );
           },
@@ -376,7 +332,6 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  // ════════ FORM CARD ════════
   Widget _buildFormCard(AppLocalizations l) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -396,47 +351,12 @@ class _SignupScreenState extends State<SignupScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Username + AI generate
-          Row(
-            children: [
-              Expanded(
-                child: _buildField(
-                  controller: _usernameCtrl,
-                  focusNode: _usernameFocus,
-                  hint: l.t('username'),
-                  icon: Icons.alternate_email_rounded,
-                ),
-              ),
-              const SizedBox(width: 10),
-              GestureDetector(
-                onTap: _generateUsername,
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [_kAccentLight, _kAccent, _kAccentDark],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _kAccent.withValues(alpha: 0.30),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: AnimatedBuilder(
-                    animation: _genSpin,
-                    builder: (_, child) => Transform.rotate(
-                      angle: _genSpin.value * 2 * math.pi,
-                      child: child,
-                    ),
-                    child: const Icon(Icons.auto_awesome_rounded,
-                        color: Color(0xFF2C1810), size: 22),
-                  ),
-                ),
-              ),
-            ],
+          _buildField(
+            controller: _emailCtrl,
+            focusNode: _emailFocus,
+            hint: l.t('emailAddress'),
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 14),
           _buildField(
@@ -444,14 +364,6 @@ class _SignupScreenState extends State<SignupScreen>
             focusNode: _nameFocus,
             hint: l.t('fullName'),
             icon: Icons.person_outline_rounded,
-          ),
-          const SizedBox(height: 14),
-          _buildField(
-            controller: _phoneCtrl,
-            focusNode: _phoneFocus,
-            hint: l.t('phoneNumber'),
-            icon: Icons.phone_outlined,
-            keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 14),
           _buildField(
@@ -511,7 +423,6 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  // ════════ STRENGTH METER ════════
   Widget _buildStrengthMeter() {
     final s = _strength;
     final labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
@@ -566,7 +477,6 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  // ════════ SIGN-UP BUTTON (spring + shimmer) ════════
   Widget _buildSignupButton(AppLocalizations l) {
     return GestureDetector(
       onTapDown: (_) {
@@ -650,7 +560,6 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  // ════════ FIELD ════════
   Widget _buildField({
     required TextEditingController controller,
     required FocusNode focusNode,
@@ -730,9 +639,6 @@ class _SignupScreenState extends State<SignupScreen>
   }
 }
 
-// ════════════════════════════════════════════════════════
-// CIRCLE / ROUNDED ICON BUTTON (spring)
-// ════════════════════════════════════════════════════════
 class _CircleIconButton extends StatefulWidget {
   const _CircleIconButton({
     required this.icon,
@@ -788,21 +694,18 @@ class _CircleIconButtonState extends State<_CircleIconButton> {
   }
 }
 
-// ════════════════════════════════════════════════════════
-// FLOATING FOOD DECOR (light mode only — dark uses AnimatedBackground)
-// ════════════════════════════════════════════════════════
 class _FloatingDecor extends StatelessWidget {
   const _FloatingDecor({required this.floatAnim});
 
   final AnimationController floatAnim;
 
   static const List<_FoodSpec> _specs = [
-    _FoodSpec('🍕', x: -0.88, y: -0.82, size: 22, freqX: 1.0, freqY: 0.9, ampX: 4, ampY: 7, phase: 0.0),
-    _FoodSpec('🥗', x: 0.90, y: -0.74, size: 20, freqX: 1.2, freqY: 1.1, ampX: 5, ampY: 6, phase: 1.2),
-    _FoodSpec('🍜', x: -0.92, y: -0.30, size: 18, freqX: 0.9, freqY: 1.0, ampX: 3, ampY: 8, phase: 2.4),
-    _FoodSpec('🫕', x: 0.92, y: 0.62, size: 20, freqX: 1.3, freqY: 1.2, ampX: 4, ampY: 7, phase: 3.6),
-    _FoodSpec('🥘', x: -0.86, y: 0.88, size: 22, freqX: 1.1, freqY: 0.8, ampX: 5, ampY: 6, phase: 4.8),
-    _FoodSpec('🍣', x: 0.88, y: 0.92, size: 18, freqX: 1.0, freqY: 1.3, ampX: 3, ampY: 7, phase: 6.0),
+    _FoodSpec('📧', x: -0.84, y: -0.78, size: 22, freqX: 1.0, freqY: 0.9, ampX: 4, ampY: 7, phase: 0.0),
+    _FoodSpec('✉️', x: 0.86, y: -0.68, size: 20, freqX: 1.2, freqY: 1.1, ampX: 5, ampY: 6, phase: 1.2),
+    _FoodSpec('🔐', x: -0.90, y: 0.05, size: 18, freqX: 0.9, freqY: 1.0, ampX: 3, ampY: 8, phase: 2.4),
+    _FoodSpec('📫', x: 0.90, y: 0.15, size: 20, freqX: 1.3, freqY: 1.2, ampX: 4, ampY: 7, phase: 3.6),
+    _FoodSpec('🛡️', x: -0.80, y: 0.80, size: 22, freqX: 1.1, freqY: 0.8, ampX: 5, ampY: 6, phase: 4.8),
+    _FoodSpec('✅', x: 0.84, y: 0.86, size: 18, freqX: 1.0, freqY: 1.3, ampX: 3, ampY: 7, phase: 6.0),
   ];
 
   @override

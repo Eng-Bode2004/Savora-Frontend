@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
-import 'core/theme/app_colors.dart';
+import 'core/theme/theme_notifier.dart';
 import 'core/localization/app_localizations.dart';
 import 'features/customer/auth/screens/splash_screen.dart';
 
@@ -10,9 +10,9 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: AppColors.espresso,
-    systemNavigationBarIconBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.dark,
   ));
   runApp(const SavoraApp());
 }
@@ -28,23 +28,27 @@ class _SavoraAppState extends State<SavoraApp> {
   @override
   void initState() {
     super.initState();
-    localeProvider.addListener(_onLocaleChange);
+    localeProvider.addListener(_onChange);
+    themeModeNotifier.addListener(_onChange);
   }
 
   @override
   void dispose() {
-    localeProvider.removeListener(_onLocaleChange);
+    localeProvider.removeListener(_onChange);
+    themeModeNotifier.removeListener(_onChange);
     super.dispose();
   }
 
-  void _onLocaleChange() => setState(() {});
+  void _onChange() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Savora',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeModeNotifier.value,
       locale: localeProvider.locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
