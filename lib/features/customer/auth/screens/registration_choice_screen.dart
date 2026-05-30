@@ -333,7 +333,7 @@ class _RegistrationChoiceScreenState extends State<RegistrationChoiceScreen>
       icon: Icons.phone_iphone_rounded,
       title: l.t('registerWithPhone'),
       subtitle: l.t('registerWithPhoneSub'),
-      filled: true,
+      filled: false,
       cardColor: _cardColor,
       textColor: _textColor,
       subTextColor: _subTextColor,
