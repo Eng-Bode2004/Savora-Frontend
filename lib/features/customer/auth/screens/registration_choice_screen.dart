@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
-import 'signup_screen.dart';
+import 'phone_entry_screen.dart';
+import 'email_signup_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -83,15 +84,12 @@ class _RegistrationChoiceScreenState extends State<RegistrationChoiceScreen>
 
   void _choosePhone() {
     HapticFeedback.mediumImpact();
-    // Your existing SignupScreen collects phone + does OTP
-    Navigator.of(context).push(_route(const SignupScreen()));
+    Navigator.of(context).push(_route(PhoneEntryScreen(isDarkMode: _isDarkMode)));
   }
 
   void _chooseEmail() {
     HapticFeedback.mediumImpact();
-    // Until you build a dedicated email screen, route to SignupScreen too.
-    // Swap to your EmailSignupScreen once it exists.
-    Navigator.of(context).push(_route(const SignupScreen()));
+    Navigator.of(context).push(_route(EmailSignupScreen(isDarkMode: _isDarkMode)));
   }
 
   @override

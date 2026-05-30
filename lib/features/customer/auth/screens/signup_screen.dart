@@ -136,7 +136,7 @@ class _SignupScreenState extends State<SignupScreen>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => OtpScreen(phone: _phoneCtrl.text, isDarkMode: _isDarkMode),
+            builder: (_) => OtpScreen(contact: _phoneCtrl.text, isDarkMode: _isDarkMode),
           ),
         );
       }
@@ -253,45 +253,51 @@ class _SignupScreenState extends State<SignupScreen>
             ),
           ),
         ),
-        AnimatedBuilder(
-          animation: _float,
-          builder: (_, __) {
-            final shift = _float.value * 30;
-            return Positioned(
-              top: -80 + shift,
-              right: -50,
-              child: Container(
-                width: 240,
-                height: 240,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [_kAccent.withValues(alpha: 0.08), Colors.transparent],
+        Positioned(
+          top: -80,
+          right: -50,
+          child: AnimatedBuilder(
+            animation: _float,
+            builder: (_, __) {
+              final shift = _float.value * 30;
+              return Transform.translate(
+                offset: Offset(0, shift),
+                child: Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [_kAccent.withValues(alpha: 0.08), Colors.transparent],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
-        AnimatedBuilder(
-          animation: _float,
-          builder: (_, __) {
-            final shift = _float.value * 30;
-            return Positioned(
-              bottom: -70 - shift,
-              left: -60,
-              child: Container(
-                width: 220,
-                height: 220,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [_kAccent.withValues(alpha: 0.04), Colors.transparent],
+        Positioned(
+          bottom: -70,
+          left: -60,
+          child: AnimatedBuilder(
+            animation: _float,
+            builder: (_, __) {
+              final shift = _float.value * 30;
+              return Transform.translate(
+                offset: Offset(0, -shift),
+                child: Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [_kAccent.withValues(alpha: 0.04), Colors.transparent],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ],
     );
@@ -604,24 +610,30 @@ class _SignupScreenState extends State<SignupScreen>
           child: Stack(
             alignment: Alignment.center,
             children: [
-              AnimatedBuilder(
-                animation: _shimmer,
-                builder: (_, __) => Positioned(
-                  left: -90 + _shimmer.value * 480,
-                  top: 0,
-                  bottom: 0,
-                  width: 70,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          Colors.white.withValues(alpha: 0.18),
-                          Colors.transparent,
-                        ],
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: AnimatedBuilder(
+                  animation: _shimmer,
+                  builder: (_, __) {
+                    final left = -90 + _shimmer.value * 480;
+                    return Transform.translate(
+                      offset: Offset(left, 0),
+                      child: Container(
+                        width: 70,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Colors.white.withValues(alpha: 0.18),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
               _isLoading

@@ -1,46 +1,63 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_background.dart';
-import '../../../../shared/widgets/primary_button.dart';
-import '../../../../shared/widgets/reveal.dart';
+import 'role_selection_screen.dart';
+
+const _kAccent = Color(0xFFE8A838);
+const _kAccentLight = Color(0xFFF0B040);
+const _kAccentDark = Color(0xFFD4952E);
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key, required this.phone, this.isDarkMode = true});
+  const OtpScreen({
+    super.key,
+    required this.contact,
+    this.isDarkMode = true,
+    this.viaEmail = false,
+  });
 
-  final String phone;
+  final String contact;
   final bool isDarkMode;
+  final bool viaEmail;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen>
-    with SingleTickerProviderStateMixin {
+class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
   static const int _length = 5;
 
   late final AnimationController _entrance;
+  late final AnimationController _float;
   final TextEditingController _code = TextEditingController();
   final FocusNode _focus = FocusNode();
 
   Timer? _timer;
   int _seconds = 45;
+  bool _verifying = false;
+  late bool _isDarkMode;
 
-  bool get _isDark => widget.isDarkMode;
-
-  Color get _bgColor => _isDark ? AppColors.espresso : const Color(0xFFFDFBF7);
-  Color get _textColor => _isDark ? AppColors.cream : const Color(0xFF1A1410);
-  Color get _subTextColor => _isDark ? AppColors.creamDim : const Color(0xFF6B6258);
+  // ── theme ──
+  Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
+  Color get _bgColor2 => _isDarkMode ? AppColors.espresso : const Color(0xFFF7F4EE);
+  Color get _textColor => _isDarkMode ? AppColors.cream : const Color(0xFF161618);
+  Color get _subTextColor => _isDarkMode ? AppColors.creamDim : const Color(0xFF8A8A8A);
+  Color get _fieldBg => _isDarkMode ? AppColors.glass : const Color(0xFFF5F3EF);
+  Color get _fieldBorder => _isDarkMode ? AppColors.glassBorder : const Color(0xFFE8E4DE);
 
   @override
   void initState() {
     super.initState();
+    _isDarkMode = widget.isDarkMode;
     _entrance = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1000),
     )..forward();
+    _float = AnimationController(vsync: this, duration: const Duration(seconds: 6))
+      ..repeat();
     _code.addListener(() => setState(() {}));
     _startTimer();
     Future.delayed(const Duration(milliseconds: 450), () {
@@ -49,7 +66,7 @@ class _OtpScreenState extends State<OtpScreen>
   }
 
   void _startTimer() {
-    _seconds = 45;
+    setState(() => _seconds = 45);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_seconds == 0) {
@@ -63,6 +80,7 @@ class _OtpScreenState extends State<OtpScreen>
   @override
   void dispose() {
     _entrance.dispose();
+    _float.dispose();
     _code.dispose();
     _focus.dispose();
     _timer?.cancel();
@@ -72,164 +90,253 @@ class _OtpScreenState extends State<OtpScreen>
   bool get _complete => _code.text.length == _length;
 
   void _verify() {
-    final l = AppLocalizations.of(context);
     FocusScope.of(context).unfocus();
-    showDialog(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (_) => _SuccessDialog(l: l, isDark: _isDark),
+    HapticFeedback.mediumImpact();
+    setState(() => _verifying = true);
+
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+      setState(() => _verifying = false);
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, a, __) => const RoleSelectionScreen(),
+          transitionsBuilder: (_, a, __, child) => FadeTransition(
+            opacity: CurvedAnimation(parent: a, curve: Curves.easeOutExpo),
+            child: SlideTransition(
+              position: Tween(begin: const Offset(0, 0.06), end: Offset.zero)
+                  .animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
+              child: child,
+            ),
+          ),
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    });
+  }
+
+  double _t(double start, double end) {
+    final v = _entrance.value.clamp(start, end);
+    return ((v - start) / (end - start)).clamp(0.0, 1.0);
+  }
+
+  static double _ease(double t) => 1.0 - math.pow(1.0 - t, 3.5).toDouble();
+
+  Widget _reveal(double start, double end, Widget child, {double dy = 18}) {
+    final t = _ease(_t(start, end));
+    return Opacity(
+      opacity: t,
+      child: Transform.translate(offset: Offset(0, (1 - t) * dy), child: child),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: _isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      value: _isDarkMode ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: _bgColor,
-        body: _isDark
-            ? AnimatedBackground(
-                child: _buildBody(l),
-              )
-            : _buildBody(l),
+        resizeToAvoidBottomInset: true,
+        body: Stack(
+          children: [
+            _buildBackground(),
+            Positioned.fill(
+              child: SafeArea(
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([_entrance, _float]),
+                  builder: (context, _) {
+                    // ★ FIX: LayoutBuilder + scrollable + minHeight keeps the
+                    // verify button at the bottom when there's room, and lets the
+                    // whole page scroll (no overflow) when the keyboard shrinks it.
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: IntrinsicHeight(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 28),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 8),
+                                    _reveal(0.0, 0.3, _buildBackButton()),
+                                    const SizedBox(height: 28),
+                                    _reveal(0.05, 0.4, _buildHero()),
+                                    const SizedBox(height: 28),
+                                    _reveal(0.1, 0.5, _buildTitle(l)),
+                                    const SizedBox(height: 12),
+                                    _reveal(0.18, 0.6, _buildSubtitle(l)),
+                                    const SizedBox(height: 36),
+                                    _reveal(0.3, 0.75, _buildOtpBoxes()),
+                                    const SizedBox(height: 26),
+                                    _reveal(0.4, 0.85, Center(child: _buildResend(l))),
+                                    const Spacer(),
+                                    _reveal(0.45, 1.0, _buildVerifyButton(l)),
+                                    const SizedBox(height: 24),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildBody(AppLocalizations l) {
-    return SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    _BackButton(
-                      isDark: _isDark,
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                    const SizedBox(height: 36),
-
-                    Reveal(
-                      controller: _entrance,
-                      start: 0.0,
-                      end: 0.6,
-                      child: Text(
-                        l.t('verifyYourNumber'),
-                        style: TextStyle(
-                          color: _textColor,
-                          fontSize: 30,
-                          height: 1.15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Reveal(
-                      controller: _entrance,
-                      start: 0.15,
-                      end: 0.7,
-                      child: Text(
-                        '${l.t('enterCode')}${widget.phone}',
-                        style: TextStyle(
-                          color: _subTextColor,
-                          fontSize: 15,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-
-                    Reveal(
-                      controller: _entrance,
-                      start: 0.3,
-                      end: 0.85,
-                      child: _OtpBoxes(
-                        length: _length,
-                        controller: _code,
-                        focusNode: _focus,
-                        isDark: _isDark,
-                        onCompleted: (_) {},
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-
-                    Reveal(
-                      controller: _entrance,
-                      start: 0.4,
-                      end: 0.9,
-                      child: Center(
-                        child: _ResendRow(
-                          seconds: _seconds,
-                          isDark: _isDark,
-                          onResend: _seconds == 0 ? _startTimer : null,
-                          l: l,
-                        ),
-                      ),
-                    ),
-
-                    const Spacer(),
-
-                    Reveal(
-                      controller: _entrance,
-                      start: 0.45,
-                      end: 1.0,
-                      child: PrimaryButton(
-                        label: l.t('verify'),
-                        onPressed: _complete ? _verify : null,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+  // ════════ BACKGROUND ════════
+  Widget _buildBackground() {
+    if (_isDarkMode) return const AnimatedBackground(child: SizedBox.expand());
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: const Alignment(-0.5, -1.0),
+              end: const Alignment(0.5, 1.2),
+              colors: [_bgColor, _bgColor2],
+            ),
+          ),
+        ),
+        Positioned(
+          top: -80,
+          right: -50,
+          child: Container(
+            width: 240,
+            height: 240,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [_kAccent.withValues(alpha: 0.08), Colors.transparent],
               ),
             ),
+          ),
+        ),
+        Positioned(
+          bottom: -70,
+          left: -60,
+          child: Container(
+            width: 220,
+            height: 220,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [_kAccent.withValues(alpha: 0.04), Colors.transparent],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ════════ BACK BUTTON ════════
+  Widget _buildBackButton() {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).maybePop(),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: _isDarkMode ? AppColors.glass : Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: _fieldBorder),
+        ),
+        child: Icon(Icons.arrow_back_rounded, color: _textColor, size: 20),
+      ),
+    );
+  }
+
+  // ════════ HERO ════════
+  Widget _buildHero() {
+    final bob = math.sin(_float.value * 2 * math.pi) * 6;
+    return Center(
+      child: Transform.translate(
+        offset: Offset(0, bob),
+        child: Container(
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(colors: [_kAccentLight, _kAccentDark]),
+            boxShadow: [
+              BoxShadow(
+                color: _kAccent.withValues(alpha: 0.4),
+                blurRadius: 22,
+                spreadRadius: -4,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Icon(
+            widget.viaEmail ? Icons.mark_email_read_rounded : Icons.sms_rounded,
+            color: const Color(0xFF2C1810),
+            size: 38,
           ),
         ),
       ),
     );
   }
-}
 
-class _OtpBoxes extends StatelessWidget {
-  const _OtpBoxes({
-    required this.length,
-    required this.controller,
-    required this.focusNode,
-    required this.isDark,
-    required this.onCompleted,
-  });
+  // ════════ TITLE ════════
+  Widget _buildTitle(AppLocalizations l) {
+    return Text(
+      l.t('verifyYourNumber'),
+      style: TextStyle(
+        color: _textColor,
+        fontSize: 28,
+        height: 1.15,
+        fontWeight: FontWeight.w700,
+        fontFamily: 'DM Sans',
+      ),
+    );
+  }
 
-  final int length;
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool isDark;
-  final ValueChanged<String> onCompleted;
+  // ════════ SUBTITLE ════════
+  Widget _buildSubtitle(AppLocalizations l) {
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          color: _subTextColor,
+          fontSize: 15,
+          height: 1.5,
+          fontFamily: 'DM Sans',
+        ),
+        children: [
+          TextSpan(text: '${l.t('enterCode')} '),
+          TextSpan(
+            text: widget.contact,
+            style: TextStyle(color: _textColor, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Color get _boxBg => isDark ? AppColors.glass : const Color(0x0A1A1410);
-  Color get _boxBorder => isDark ? AppColors.glassBorder : const Color(0xFFE8E4DE);
-  Color get _textColor => isDark ? AppColors.cream : const Color(0xFF1A1410);
-
-  @override
-  Widget build(BuildContext context) {
-    final text = controller.text;
-
+  // ════════ OTP BOXES ════════
+  Widget _buildOtpBoxes() {
+    final text = _code.text;
     return GestureDetector(
-      onTap: () => focusNode.requestFocus(),
+      onTap: () => _focus.requestFocus(),
       child: Stack(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(length, (i) {
+            children: List.generate(_length, (i) {
               final filled = i < text.length;
-              final active = i == text.length && focusNode.hasFocus;
+              final active = i == text.length && _focus.hasFocus;
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOut,
@@ -237,24 +344,24 @@ class _OtpBoxes extends StatelessWidget {
                 height: 64,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: _boxBg,
+                  color: _fieldBg,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: active
-                        ? AppColors.saffron
+                        ? _kAccent
                         : filled
-                            ? AppColors.amber.withValues(alpha: 0.6)
-                            : _boxBorder,
+                        ? _kAccent.withValues(alpha: 0.6)
+                        : _fieldBorder,
                     width: active ? 1.8 : 1.2,
                   ),
                   boxShadow: active
                       ? [
-                          BoxShadow(
-                            color: AppColors.saffron.withValues(alpha: 0.25),
-                            blurRadius: 16,
-                            spreadRadius: 1,
-                          ),
-                        ]
+                    BoxShadow(
+                      color: _kAccent.withValues(alpha: 0.25),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                  ]
                       : null,
                 ),
                 child: Text(
@@ -272,17 +379,12 @@ class _OtpBoxes extends StatelessWidget {
             child: Opacity(
               opacity: 0,
               child: TextField(
-                controller: controller,
-                focusNode: focusNode,
+                controller: _code,
+                focusNode: _focus,
                 keyboardType: TextInputType.number,
-                maxLength: length,
+                maxLength: _length,
                 showCursor: false,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                ],
-                onChanged: (v) {
-                  if (v.length == length) onCompleted(v);
-                },
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(counterText: ''),
               ),
             ),
@@ -291,133 +393,80 @@ class _OtpBoxes extends StatelessWidget {
       ),
     );
   }
-}
 
-class _ResendRow extends StatelessWidget {
-  const _ResendRow({
-    required this.seconds,
-    required this.isDark,
-    required this.onResend,
-    required this.l,
-  });
-
-  final int seconds;
-  final bool isDark;
-  final VoidCallback? onResend;
-  final AppLocalizations l;
-
-  Color get _muted => isDark ? AppColors.muted : const Color(0xFF8A8073);
-
-  @override
-  Widget build(BuildContext context) {
-    if (seconds > 0) {
+  // ════════ RESEND ════════
+  Widget _buildResend(AppLocalizations l) {
+    if (_seconds > 0) {
       return Text(
-        '${l.t('resendIn')}${seconds.toString().padLeft(2, '0')}',
-        style: TextStyle(color: _muted, fontSize: 14),
+        '${l.t('resendIn')}${_seconds.toString().padLeft(2, '0')}',
+        style: TextStyle(color: _subTextColor, fontSize: 14, fontFamily: 'DM Sans'),
       );
     }
     return GestureDetector(
-      onTap: onResend,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _startTimer();
+      },
       child: Text(
         l.t('resendCode'),
         style: const TextStyle(
-          color: AppColors.saffron,
+          color: _kAccent,
           fontSize: 14,
           fontWeight: FontWeight.w700,
+          fontFamily: 'DM Sans',
         ),
       ),
     );
   }
-}
 
-class _SuccessDialog extends StatelessWidget {
-  const _SuccessDialog({required this.l, required this.isDark});
-
-  final AppLocalizations l;
-  final bool isDark;
-
-  Color get _bg => isDark ? AppColors.espressoSoft : Colors.white;
-  Color get _text => isDark ? AppColors.cream : const Color(0xFF1A1410);
-  Color get _sub => isDark ? AppColors.creamDim : const Color(0xFF6B6258);
-  Color get _border => isDark ? AppColors.glassBorder : const Color(0xFFE8E4DE);
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 420),
-        curve: Curves.easeOutBack,
-        builder: (context, t, child) {
-          return Transform.scale(scale: t, child: child);
-        },
+  // ════════ VERIFY BUTTON ════════
+  Widget _buildVerifyButton(AppLocalizations l) {
+    final enabled = _complete && !_verifying;
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: GestureDetector(
+        onTap: enabled ? _verify : null,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 40),
-          padding: const EdgeInsets.all(32),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: _bg,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: _border),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  gradient: AppColors.accentGradient,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_rounded,
-                    color: AppColors.espresso, size: 40),
-              ),
-              const SizedBox(height: 22),
-              Text(
-                l.t('youreIn'),
-                style: TextStyle(
-                  color: _text,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l.t('welcome'),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _sub, fontSize: 14),
+            gradient: const LinearGradient(
+              begin: Alignment(-0.8, -1.0),
+              end: Alignment(0.8, 1.0),
+              colors: [_kAccentLight, _kAccent, _kAccentDark],
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: _kAccent.withValues(alpha: 0.3),
+                blurRadius: 16,
+                spreadRadius: -4,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
+          child: Center(
+            child: _verifying
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2C1810)),
+              ),
+            )
+                : Text(
+              l.t('verify'),
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF2C1810),
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _BackButton extends StatelessWidget {
-  const _BackButton({required this.isDark, required this.onTap});
-
-  final bool isDark;
-  final VoidCallback onTap;
-
-  Color get _bg => isDark ? AppColors.glass : const Color(0x0A1A1410);
-  Color get _border => isDark ? AppColors.glassBorder : const Color(0xFFE8E4DE);
-  Color get _icon => isDark ? AppColors.cream : const Color(0xFF1A1410);
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: _bg,
-          shape: BoxShape.circle,
-          border: Border.all(color: _border),
-        ),
-        child: Icon(Icons.arrow_back_rounded, color: _icon, size: 20),
       ),
     );
   }

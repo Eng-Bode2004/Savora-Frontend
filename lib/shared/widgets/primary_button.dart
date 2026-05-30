@@ -76,15 +76,15 @@ class _PrimaryButtonState extends State<PrimaryButton>
                 alignment: Alignment.center,
                 children: [
                   if (!widget.loading)
-                    AnimatedBuilder(
-                      animation: _shine,
-                      builder: (context, _) {
-                        return Positioned.fill(
-                          child: CustomPaint(
+                    Positioned.fill(
+                      child: AnimatedBuilder(
+                        animation: _shine,
+                        builder: (context, _) {
+                          return CustomPaint(
                             painter: _ShinePainter(_shine.value),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   if (widget.loading)
                     const SizedBox(
