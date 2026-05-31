@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -23,30 +24,48 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
   bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
 
-  // ── role definitions ──
+  // roleKey = stored identity (English). titleKey/subtitleKey = localization keys.
+  // The `fallback*` strings are shown if a key is missing from AppLocalizations,
+  // so you NEVER see raw keys like "roleCustomer".
   static const List<_RoleSpec> _roles = [
     _RoleSpec(
-      role: 'Customer',
-      subtitle: 'Order food from your favourite places',
+      roleKey: 'Customer',
+      titleKey: 'roleCustomer',
+      subtitleKey: 'roleCustomerSub',
+      fallbackTitle: 'Customer',
+      fallbackSubtitle: 'Browse restaurants and order delicious meals to your door',
       image: 'assets/images/Cutomer.png',
       icon: Icons.restaurant_rounded,
       tint: Color(0xFFE8A838),
     ),
     _RoleSpec(
-      role: 'Chief',
-      subtitle: 'Cook and sell your dishes',
+      roleKey: 'Chef',
+      titleKey: 'roleChief',
+      subtitleKey: 'roleChiefSub',
+      fallbackTitle: 'Chef',
+      fallbackSubtitle: 'Share your cooking, manage your menu, and grow your kitchen',
       image: 'assets/images/Chief.png',
       icon: Icons.soup_kitchen_rounded,
       tint: Color(0xFFE07A3D),
     ),
     _RoleSpec(
-      role: 'Delivery',
-      subtitle: 'Deliver orders and earn',
+      roleKey: 'Delivery',
+      titleKey: 'roleDelivery',
+      subtitleKey: 'roleDeliverySub',
+      fallbackTitle: 'Delivery Partner',
+      fallbackSubtitle: 'Pick up orders, deliver to customers, and earn on your schedule',
       image: 'assets/images/Delivery.png',
       icon: Icons.delivery_dining_rounded,
       tint: Color(0xFF5BA46A),
     ),
   ];
+
+  // Returns the translation, or the fallback if the key is missing / echoed back.
+  String _loc(AppLocalizations l, String key, String fallback) {
+    final v = l.t(key);
+    if (v.isEmpty || v == key) return fallback;
+    return v;
+  }
 
   @override
   void initState() {
@@ -103,8 +122,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     });
   }
 
-  // ★ Show success popup, then return to login (root route).
-  void _selectRole(String role) {
+  void _selectRole(String roleTitle) {
     HapticFeedback.mediumImpact();
     showGeneralDialog(
       context: context,
@@ -119,75 +137,80 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
           opacity: anim.value.clamp(0.0, 1.0),
           child: Transform.scale(
             scale: 0.8 + 0.2 * curved.value.clamp(0.0, 1.0),
-            child: _RoleSuccessDialog(role: role, isDark: _isDarkMode),
+            child: _RoleSuccessDialog(role: roleTitle, isDark: _isDarkMode),
           ),
         );
       },
     );
 
-    // Auto-dismiss the dialog and unwind back to the login screen.
     Future.delayed(const Duration(milliseconds: 1800), () {
       if (!mounted) return;
-      Navigator.of(context).pop(); // close dialog
-      Navigator.of(context).popUntil((route) => route.isFirst); // back to login
+      Navigator.of(context).pop();
+      Navigator.of(context).popUntil((route) => route.isFirst);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final isRtl = l.locale.languageCode == 'ar';
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: _isDarkMode ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: _bgColor,
-        body: Stack(
-          children: [
-            _buildBackground(),
-            Positioned.fill(
-              child: SafeArea(
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([_entrance, _float, _shimmer]),
-                  builder: (context, _) {
-                    return LayoutBuilder(
-                      builder: (context, constraints) {
-                        return SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight: constraints.maxHeight,
-                            ),
-                            child: IntrinsicHeight(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 28),
-                                child: Column(
-                                  children: [
-                                    const SizedBox(height: 12),
-                                    _reveal(0.0, 0.22, _buildTopBar()),
-                                    const SizedBox(height: 20),
-                                    _reveal(0.05, 0.38, _buildHero()),
-                                    const SizedBox(height: 6),
-                                    _reveal(0.12, 0.42, _buildHeader()),
-                                    const SizedBox(height: 34),
-                                    _reveal(0.24, 0.62, _buildRoleCard(_roles[0]), dy: 24),
-                                    const SizedBox(height: 14),
-                                    _reveal(0.32, 0.70, _buildRoleCard(_roles[1]), dy: 24),
-                                    const SizedBox(height: 14),
-                                    _reveal(0.40, 0.78, _buildRoleCard(_roles[2]), dy: 24),
-                                    const Spacer(),
-                                    _reveal(0.55, 1.0, _buildFooter()),
-                                    const SizedBox(height: 20),
-                                  ],
+        body: Directionality(
+          textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: Stack(
+            children: [
+              _buildBackground(),
+              Positioned.fill(
+                child: SafeArea(
+                  child: AnimatedBuilder(
+                    animation: Listenable.merge([_entrance, _float, _shimmer]),
+                    builder: (context, _) {
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight,
+                              ),
+                              child: IntrinsicHeight(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  child: Column(
+                                    children: [
+                                      const SizedBox(height: 12),
+                                      _reveal(0.0, 0.22, _buildTopBar()),
+                                      const SizedBox(height: 20),
+                                      _reveal(0.05, 0.38, _buildHero()),
+                                      const SizedBox(height: 10),
+                                      _reveal(0.12, 0.42, _buildHeader(l)),
+                                      const SizedBox(height: 34),
+                                      _reveal(0.24, 0.62, _buildRoleCard(l, _roles[0]), dy: 24),
+                                      const SizedBox(height: 16),
+                                      _reveal(0.32, 0.70, _buildRoleCard(l, _roles[1]), dy: 24),
+                                      const SizedBox(height: 16),
+                                      _reveal(0.40, 0.78, _buildRoleCard(l, _roles[2]), dy: 24),
+                                      const Spacer(),
+                                      _reveal(0.55, 1.0, _buildFooter(l)),
+                                      const SizedBox(height: 20),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  },
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -238,7 +261,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     );
   }
 
-  // ════════ TOP BAR — back + dark toggle ════════
+  // ════════ TOP BAR ════════
   Widget _buildTopBar() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -284,7 +307,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     );
   }
 
-  // ════════ HERO — bobbing badge with orbiting role icons ════════
+  // ════════ HERO ════════
   Widget _buildHero() {
     final bob = math.sin(_float.value * 2 * math.pi) * 7;
     final orbit = _float.value * 2 * math.pi;
@@ -366,11 +389,12 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   }
 
   // ════════ HEADER ════════
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l) {
     return Column(
       children: [
         Text(
-          'Choose your role',
+          _loc(l, 'chooseYourRole', 'Choose your role'),
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: 'DM Sans',
             fontSize: 24,
@@ -378,19 +402,27 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
             color: _textColor,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Text(
-          'Tell us who you are',
+          _loc(l, 'tellUsWhoYouAre', 'How would you like to use Savora?'),
           textAlign: TextAlign.center,
-          style: TextStyle(fontFamily: 'DM Sans', fontSize: 14, color: _subTextColor),
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 14,
+            height: 1.4,
+            color: _subTextColor,
+          ),
         ),
       ],
     );
   }
 
   // ════════ ROLE CARD ════════
-  Widget _buildRoleCard(_RoleSpec spec) {
+  Widget _buildRoleCard(AppLocalizations l, _RoleSpec spec) {
+    final title = _loc(l, spec.titleKey, spec.fallbackTitle);
     return _RoleCard(
+      title: title,
+      subtitle: _loc(l, spec.subtitleKey, spec.fallbackSubtitle),
       spec: spec,
       isDark: _isDarkMode,
       cardColor: _cardColor,
@@ -399,14 +431,14 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       textColor: _textColor,
       subTextColor: _subTextColor,
       shimmer: _shimmer,
-      onTap: () => _selectRole(spec.role),
+      onTap: () => _selectRole(title),
     );
   }
 
   // ════════ FOOTER ════════
-  Widget _buildFooter() {
+  Widget _buildFooter(AppLocalizations l) {
     return Text(
-      'You can change this later in settings',
+      _loc(l, 'changeRoleLater', 'You can change this anytime in settings'),
       textAlign: TextAlign.center,
       style: TextStyle(
         fontFamily: 'DM Sans',
@@ -422,25 +454,32 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 // ════════════════════════════════════════════════════════
 class _RoleSpec {
   const _RoleSpec({
-    required this.role,
-    required this.subtitle,
+    required this.roleKey,
+    required this.titleKey,
+    required this.subtitleKey,
+    required this.fallbackTitle,
+    required this.fallbackSubtitle,
     required this.image,
     required this.icon,
     required this.tint,
   });
-  final String role;
-  final String subtitle;
+  final String roleKey;
+  final String titleKey;
+  final String subtitleKey;
+  final String fallbackTitle;
+  final String fallbackSubtitle;
   final String image;
   final IconData icon;
   final Color tint;
 }
 
 // ════════════════════════════════════════════════════════
-// ROLE CARD — image with graceful icon fallback, press spring,
-// shimmer sweep on press, accent tint per role
+// ROLE CARD
 // ════════════════════════════════════════════════════════
 class _RoleCard extends StatefulWidget {
   const _RoleCard({
+    required this.title,
+    required this.subtitle,
     required this.spec,
     required this.isDark,
     required this.cardColor,
@@ -452,6 +491,8 @@ class _RoleCard extends StatefulWidget {
     required this.onTap,
   });
 
+  final String title;
+  final String subtitle;
   final _RoleSpec spec;
   final bool isDark;
   final Color cardColor, borderColor, shadowColor, textColor, subTextColor;
@@ -485,7 +526,7 @@ class _RoleCardState extends State<_RoleCard> {
         transform: Matrix4.identity()..scale(_pressed ? 0.97 : 1.0),
         transformAlignment: Alignment.center,
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: _pressed
               ? tint.withValues(alpha: widget.isDark ? 0.18 : 0.08)
@@ -527,10 +568,11 @@ class _RoleCardState extends State<_RoleCard> {
                   ),
                 ),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    width: 60,
-                    height: 60,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
                       color: tint.withValues(alpha: widget.isDark ? 0.18 : 0.12),
                       borderRadius: BorderRadius.circular(16),
@@ -544,34 +586,36 @@ class _RoleCardState extends State<_RoleCard> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 18),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          widget.spec.role,
+                          widget.title,
                           style: TextStyle(
                             fontFamily: 'DM Sans',
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
+                            height: 1.2,
                             color: _pressed ? tint : widget.textColor,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 5),
                         Text(
-                          widget.spec.subtitle,
+                          widget.subtitle,
                           style: TextStyle(
                             fontFamily: 'DM Sans',
-                            fontSize: 12,
+                            fontSize: 12.5,
                             color: widget.subTextColor,
-                            height: 1.3,
+                            height: 1.4,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Icon(
                     Icons.arrow_forward_ios_rounded,
                     size: 16,
@@ -588,7 +632,7 @@ class _RoleCardState extends State<_RoleCard> {
 }
 
 // ════════════════════════════════════════════════════════
-// ROLE SUCCESS DIALOG — themed popup with animated check
+// ROLE SUCCESS DIALOG
 // ════════════════════════════════════════════════════════
 class _RoleSuccessDialog extends StatefulWidget {
   const _RoleSuccessDialog({required this.role, required this.isDark});
@@ -603,6 +647,12 @@ class _RoleSuccessDialog extends StatefulWidget {
 class _RoleSuccessDialogState extends State<_RoleSuccessDialog>
     with SingleTickerProviderStateMixin {
   late final AnimationController _check;
+
+  String _loc(AppLocalizations l, String key, String fallback) {
+    final v = l.t(key);
+    if (v.isEmpty || v == key) return fallback;
+    return v;
+  }
 
   @override
   void initState() {
@@ -624,6 +674,7 @@ class _RoleSuccessDialogState extends State<_RoleSuccessDialog>
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final dark = widget.isDark;
     final cardColor = dark ? AppColors.espressoSoft : Colors.white;
     final textColor = dark ? AppColors.cream : const Color(0xFF1A1410);
@@ -687,7 +738,8 @@ class _RoleSuccessDialogState extends State<_RoleSuccessDialog>
               ),
               const SizedBox(height: 22),
               Text(
-                'You\'re all set!',
+                _loc(l, 'youreAllSet', "You're all set!"),
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 20,
@@ -705,7 +757,7 @@ class _RoleSuccessDialogState extends State<_RoleSuccessDialog>
                     color: subColor,
                   ),
                   children: [
-                    const TextSpan(text: 'Your account is ready as a '),
+                    TextSpan(text: '${_loc(l, 'accountReadyAs', 'Your account is ready as a')} '),
                     TextSpan(
                       text: widget.role,
                       style: const TextStyle(
@@ -713,7 +765,7 @@ class _RoleSuccessDialogState extends State<_RoleSuccessDialog>
                         color: _kAccent,
                       ),
                     ),
-                    const TextSpan(text: '.\nPlease log in to continue.'),
+                    TextSpan(text: '.\n${_loc(l, 'pleaseLogInToContinue', 'Please log in to continue.')}'),
                   ],
                 ),
                 textAlign: TextAlign.center,

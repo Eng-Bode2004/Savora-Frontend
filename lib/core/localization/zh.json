@@ -45,5 +45,17 @@
   "getStarted": "开始",
   "registerWithPhone": "通过手机号\n注册",
   "registerWithEmail": "通过邮箱和\n密码注册",
-  "emailAddress": "邮箱地址"
+  "emailAddress": "邮箱地址",
+  "selectRole": "选择你的角色",
+  "selectRoleSubtitle": "你想如何使用 Savora？",
+  "customer": "顾客",
+  "customerDesc": "浏览餐厅，把美味佳肴送到家门口",
+  "chef": "厨师",
+  "chefDesc": "分享你的厨艺，管理菜单，发展你的厨房",
+  "delivery": "配送员",
+  "deliveryDesc": "接单、配送，按自己的时间赚取收入",
+  "changeRoleLater": "你可以随时在设置中更改",
+  "youreAllSet": "一切就绪！",
+  "accountReadyAs": "你的账户已就绪，身份为",
+  "pleaseLogInToContinue": "请登录以继续。"
 }

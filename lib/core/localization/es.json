@@ -45,5 +45,17 @@
   "getStarted": "Comenzar",
   "registerWithPhone": "Registrarse con\nnúmero de teléfono",
   "registerWithEmail": "Registrarse con\ncorreo y contraseña",
-  "emailAddress": "Correo electrónico"
+  "emailAddress": "Correo electrónico",
+  "selectRole": "Elige tu rol",
+  "selectRoleSubtitle": "¿Cómo quieres usar Savora?",
+  "customer": "Cliente",
+  "customerDesc": "Explora restaurantes y pide comidas deliciosas a tu puerta",
+  "chef": "Chef",
+  "chefDesc": "Comparte tu cocina, gestiona tu menú y haz crecer tu negocio",
+  "delivery": "Repartidor",
+  "deliveryDesc": "Recoge pedidos, entrégalos y gana según tu horario",
+  "changeRoleLater": "Puedes cambiar esto cuando quieras en ajustes",
+  "youreAllSet": "¡Todo listo!",
+  "accountReadyAs": "Tu cuenta está lista como",
+  "pleaseLogInToContinue": "Inicia sesión para continuar."
 }
