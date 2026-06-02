@@ -57,5 +57,12 @@
   "changeRoleLater": "Puedes cambiar esto cuando quieras en ajustes",
   "youreAllSet": "¡Todo listo!",
   "accountReadyAs": "Tu cuenta está lista como",
-  "pleaseLogInToContinue": "Inicia sesión para continuar."
+  "pleaseLogInToContinue": "Inicia sesión para continuar.",
+  "continueAsGuest": "Continuar como Invitado",
+  "nameEntryTitle": "¿Cómo te llamas?",
+  "nameEntrySubtitle": "Así aparecerá en tu perfil y pedidos.",
+  "nameEntryHint": "Juan Pérez",
+  "continue": "Continuar",
+  "registerWithPhoneSub": "Recibe un código de verificación por SMS",
+  "registerWithEmailSub": "Regístrate con correo electrónico y una contraseña segura"
 }

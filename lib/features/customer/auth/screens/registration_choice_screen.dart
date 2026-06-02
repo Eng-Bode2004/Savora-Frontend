@@ -12,7 +12,9 @@ const _kAccentLight = Color(0xFFF0B040);
 const _kAccentDark = Color(0xFFD4952E);
 
 class RegistrationChoiceScreen extends StatefulWidget {
-  const RegistrationChoiceScreen({super.key});
+  const RegistrationChoiceScreen({super.key, this.name = ''});
+
+  final String name;
 
   @override
   State<RegistrationChoiceScreen> createState() =>

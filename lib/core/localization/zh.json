@@ -57,5 +57,12 @@
   "changeRoleLater": "你可以随时在设置中更改",
   "youreAllSet": "一切就绪！",
   "accountReadyAs": "你的账户已就绪，身份为",
-  "pleaseLogInToContinue": "请登录以继续。"
+  "pleaseLogInToContinue": "请登录以继续。",
+  "continueAsGuest": "以访客身份继续",
+  "nameEntryTitle": "你叫什么名字？",
+  "nameEntrySubtitle": "这将显示在您的个人资料和订单中。",
+  "nameEntryHint": "张三",
+  "continue": "继续",
+  "registerWithPhoneSub": "通过短信接收验证码",
+  "registerWithEmailSub": "使用电子邮件和安全密码注册"
 }

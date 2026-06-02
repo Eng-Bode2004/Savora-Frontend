@@ -57,5 +57,12 @@
   "changeRoleLater": "You can change this anytime in settings",
   "youreAllSet": "You're all set!",
   "accountReadyAs": "Your account is ready as a",
-  "pleaseLogInToContinue": "Please log in to continue."
+  "pleaseLogInToContinue": "Please log in to continue.",
+  "continueAsGuest": "Continue as Guest",
+  "nameEntryTitle": "What's your name?",
+  "nameEntrySubtitle": "This is how it'll appear on your profile and orders.",
+  "nameEntryHint": "Ahmed Hassan",
+  "continue": "Continue",
+  "registerWithPhoneSub": "Receive a verification code via SMS",
+  "registerWithEmailSub": "Sign up with email and a secure password"
 }

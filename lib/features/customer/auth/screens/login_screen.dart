@@ -5,11 +5,15 @@ import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_background.dart';
-import 'registration_choice_screen.dart';
+import '../../shell/customer_shell.dart';
+import 'name_entry_screen.dart' show NameEntryScreen;
+import 'otp_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
 const _kAccentDark = Color(0xFFD4952E);
+
+enum _LoginMethod { phone, account }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,15 +31,20 @@ class _LoginScreenState extends State<LoginScreen>
   late final AnimationController _shimmer;
 
   final _userController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passController = TextEditingController();
   final _userFocus = FocusNode();
+  final _phoneFocus = FocusNode();
   final _passFocus = FocusNode();
 
   bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _guestLoading = false;
   final bool _isLoginMode = true;
   bool _buttonPressed = false;
+
+  _LoginMethod _method = _LoginMethod.phone;
 
   static const List<String> _emojis = ['🍲', '🥘', '🍕', '🥗', '🍜', '🍰', '🫕'];
   int _emojiIdx = 0;
@@ -65,6 +74,7 @@ class _LoginScreenState extends State<LoginScreen>
       ..repeat();
 
     _userFocus.addListener(() => setState(() {}));
+    _phoneFocus.addListener(() => setState(() {}));
     _passFocus.addListener(() => setState(() {}));
 
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -89,8 +99,10 @@ class _LoginScreenState extends State<LoginScreen>
     _breathe.dispose();
     _shimmer.dispose();
     _userController.dispose();
+    _phoneController.dispose();
     _passController.dispose();
     _userFocus.dispose();
+    _phoneFocus.dispose();
     _passFocus.dispose();
     super.dispose();
   }
@@ -103,11 +115,17 @@ class _LoginScreenState extends State<LoginScreen>
     });
   }
 
+  void _setMethod(_LoginMethod m) {
+    if (_method == m) return;
+    HapticFeedback.selectionClick();
+    setState(() => _method = m);
+  }
+
   void _goToSignup() {
     HapticFeedback.lightImpact();
     Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (_, a, __) => const RegistrationChoiceScreen(),
+        pageBuilder: (_, a, __) => const NameEntryScreen(),
         transitionsBuilder: (_, a, __, child) => FadeTransition(
           opacity: CurvedAnimation(parent: a, curve: Curves.easeOutExpo),
           child: SlideTransition(
@@ -121,11 +139,58 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  void _enterShell() {
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (_, a, __) => const CustomerShell(),
+        transitionsBuilder: (_, a, __, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: a, curve: Curves.easeOutExpo),
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, 0.04), end: Offset.zero)
+                .animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
+            child: child,
+          ),
+        ),
+        transitionDuration: const Duration(milliseconds: 600),
+      ),
+          (route) => false,
+    );
+  }
+
   void _login() {
     HapticFeedback.mediumImpact();
+    if (_method == _LoginMethod.phone) {
+      final phone = _phoneController.text.trim();
+      if (phone.length < 7) return;
+      final fullNumber = '+20 $phone';
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OtpScreen(
+            contact: fullNumber,
+            isDarkMode: _isDarkMode,
+            viaEmail: false,
+            onVerified: _enterShell,
+          ),
+        ),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
     Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _enterShell();
+    });
+  }
+
+  // ★ Guest mode — straight into the customer app, no auth.
+  void _continueAsGuest() {
+    HapticFeedback.mediumImpact();
+    setState(() => _guestLoading = true);
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      setState(() => _guestLoading = false);
+      _enterShell();
     });
   }
 
@@ -161,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen>
     return 1 + c3 * math.pow(t - 1, 3) + c1 * math.pow(t - 1, 2);
   }
 
-  // ════════ THEME COLORS — matches SignupScreen (OTP-style dark) ════════
+  // ════════ THEME COLORS ════════
   Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
   Color get _bgColor2 => _isDarkMode ? AppColors.espresso : const Color(0xFFF7F4EE);
   Color get _cardColor => _isDarkMode ? AppColors.glass : Colors.white;
@@ -204,18 +269,20 @@ class _LoginScreenState extends State<LoginScreen>
                           children: [
                             const SizedBox(height: 12),
                             _buildTopBar(_t(0.0, 0.25), l),
-                            const SizedBox(height: 28),
+                            const SizedBox(height: 24),
                             _buildPlateHero(_t(0.05, 0.40)),
-                            const SizedBox(height: 22),
+                            const SizedBox(height: 20),
                             _buildWordmark(_t(0.12, 0.45)),
                             const SizedBox(height: 8),
                             _buildTagline(_t(0.18, 0.50), l),
-                            const SizedBox(height: 36),
+                            const SizedBox(height: 30),
                             _buildLoginCard(_t(0.30, 0.70), l),
+                            const SizedBox(height: 16),
+                            _buildGuestButton(_t(0.50, 0.82), l),
                             const SizedBox(height: 22),
-                            _buildSocialSection(_t(0.55, 0.85), l),
+                            _buildSocialSection(_t(0.60, 0.90), l),
                             const SizedBox(height: 22),
-                            _buildTerms(_t(0.70, 1.00), l),
+                            _buildTerms(_t(0.72, 1.00), l),
                             const SizedBox(height: 24),
                           ],
                         ),
@@ -231,7 +298,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ════════ BACKGROUND — dark uses shared AnimatedBackground (same as signup) ════════
+  // ════════ BACKGROUND ════════
   Widget _buildBackground() {
     if (_isDarkMode) {
       return const AnimatedBackground(child: SizedBox.expand());
@@ -279,7 +346,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ════════ TOP BAR — language + dark mode ════════
+  // ════════ TOP BAR ════════
   Widget _buildTopBar(double t, AppLocalizations l) {
     return Opacity(
       opacity: _ease(t),
@@ -523,7 +590,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ════════ LOGIN CARD — no BackdropFilter, matches signup card ════════
+  // ════════ LOGIN CARD ════════
   Widget _buildLoginCard(double t, AppLocalizations l) {
     return Transform.translate(
       offset: Offset(0, (1 - _ease(t)) * 20),
@@ -547,23 +614,39 @@ class _LoginScreenState extends State<LoginScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildTextField(
-                controller: _userController,
-                focusNode: _userFocus,
-                hint: l.t('phoneOrUsername'),
-                icon: Icons.person_outline_rounded,
-                isPassword: false,
+              // ── method toggle ──
+              _buildMethodToggle(l),
+              const SizedBox(height: 18),
+              // ── identity field (phone OR account) ──
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 280),
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SizeTransition(sizeFactor: anim, axisAlignment: -1, child: child),
+                ),
+                child: _method == _LoginMethod.phone
+                    ? _buildPhoneField(l, key: const ValueKey('phone'))
+                    : _buildTextField(
+                  key: const ValueKey('account'),
+                  controller: _userController,
+                  focusNode: _userFocus,
+                  hint: l.t('phoneOrUsername'),
+                  icon: Icons.person_outline_rounded,
+                  isPassword: false,
+                ),
               ),
-              const SizedBox(height: 14),
-              _buildTextField(
-                controller: _passController,
-                focusNode: _passFocus,
-                hint: l.t('password'),
-                icon: Icons.lock_outline_rounded,
-                isPassword: true,
-              ),
+              if (_method == _LoginMethod.account) ...[
+                const SizedBox(height: 14),
+                _buildTextField(
+                  controller: _passController,
+                  focusNode: _passFocus,
+                  hint: l.t('password'),
+                  icon: Icons.lock_outline_rounded,
+                  isPassword: true,
+                ),
+              ],
               const SizedBox(height: 10),
-              if (_isLoginMode)
+              if (_isLoginMode && _method == _LoginMethod.account)
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
@@ -580,84 +663,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               const SizedBox(height: 18),
-              GestureDetector(
-                onTapDown: (_) {
-                  HapticFeedback.mediumImpact();
-                  setState(() => _buttonPressed = true);
-                },
-                onTapUp: (_) {
-                  setState(() => _buttonPressed = false);
-                  _login();
-                },
-                onTapCancel: () => setState(() => _buttonPressed = false),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 120),
-                  transform: Matrix4.identity()..scale(_buttonPressed ? 0.97 : 1.0),
-                  transformAlignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment(-0.8, -1.0),
-                      end: Alignment(0.8, 1.0),
-                      colors: [_kAccentLight, _kAccent, _kAccentDark],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _kAccent.withValues(alpha: _buttonPressed ? 0.42 : 0.30),
-                        blurRadius: _buttonPressed ? 22 : 16,
-                        spreadRadius: -4,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Positioned(
-                          left: -90 + _shimmer.value * 480,
-                          top: 0,
-                          bottom: 0,
-                          width: 70,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.white.withValues(alpha: 0.18),
-                                  Colors.transparent,
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        _isLoading
-                            ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor:
-                            AlwaysStoppedAnimation<Color>(Color(0xFF2C1810)),
-                          ),
-                        )
-                            : Text(
-                          _isLoginMode ? l.t('logIn') : l.t('signUp'),
-                          style: const TextStyle(
-                            fontFamily: 'DM Sans',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF2C1810),
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              _buildLoginButton(l),
               const SizedBox(height: 18),
               GestureDetector(
                 onTap: _goToSignup,
@@ -697,8 +703,305 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ════════ TEXT FIELD — animated focus glow ════════
+  // ════════ METHOD TOGGLE — Phone / Account ════════
+  Widget _buildMethodToggle(AppLocalizations l) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _fieldBgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _fieldBorderColor, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          _methodTab(
+            label: l.t('phoneNumber'),
+            icon: Icons.phone_iphone_rounded,
+            selected: _method == _LoginMethod.phone,
+            onTap: () => _setMethod(_LoginMethod.phone),
+          ),
+          _methodTab(
+            label: l.t('username'),
+            icon: Icons.alternate_email_rounded,
+            selected: _method == _LoginMethod.account,
+            onTap: () => _setMethod(_LoginMethod.account),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _methodTab({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(colors: [_kAccentLight, _kAccentDark])
+                : null,
+            borderRadius: BorderRadius.circular(11),
+            boxShadow: selected
+                ? [
+              BoxShadow(
+                color: _kAccent.withValues(alpha: 0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? const Color(0xFF2C1810) : _subTextColor,
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: selected ? const Color(0xFF2C1810) : _subTextColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ════════ PHONE FIELD — +20 Egypt ════════
+  Widget _buildPhoneField(AppLocalizations l, {Key? key}) {
+    final focused = _phoneFocus.hasFocus;
+    return AnimatedContainer(
+      key: key,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: _fieldBgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: focused ? _kAccent.withValues(alpha: 0.55) : _fieldBorderColor,
+          width: focused ? 1.5 : 1,
+        ),
+        boxShadow: focused
+            ? [BoxShadow(color: _kAccent.withValues(alpha: 0.16), blurRadius: 14, spreadRadius: 1)]
+            : null,
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 14),
+          const Text('🇪🇬', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 6),
+          Text(
+            '+20',
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: _textColor,
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 24,
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            color: _fieldBorderColor,
+          ),
+          Expanded(
+            child: TextField(
+              controller: _phoneController,
+              focusNode: _phoneFocus,
+              keyboardType: TextInputType.phone,
+              cursorColor: _kAccent,
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.0,
+                color: _textColor,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(11),
+              ],
+              decoration: InputDecoration(
+                hintText: '10 1234 5678',
+                hintStyle: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 14,
+                  letterSpacing: 1.0,
+                  color: _subTextColor.withValues(alpha: 0.6),
+                ),
+                border: InputBorder.none,
+                counterText: '',
+                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
+    );
+  }
+
+  // ════════ LOGIN BUTTON ════════
+  Widget _buildLoginButton(AppLocalizations l) {
+    return GestureDetector(
+      onTapDown: (_) {
+        HapticFeedback.mediumImpact();
+        setState(() => _buttonPressed = true);
+      },
+      onTapUp: (_) {
+        setState(() => _buttonPressed = false);
+        _login();
+      },
+      onTapCancel: () => setState(() => _buttonPressed = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        transform: Matrix4.identity()..scale(_buttonPressed ? 0.97 : 1.0),
+        transformAlignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment(-0.8, -1.0),
+            end: Alignment(0.8, 1.0),
+            colors: [_kAccentLight, _kAccent, _kAccentDark],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: _kAccent.withValues(alpha: _buttonPressed ? 0.42 : 0.30),
+              blurRadius: _buttonPressed ? 22 : 16,
+              spreadRadius: -4,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                left: -90 + _shimmer.value * 480,
+                top: 0,
+                bottom: 0,
+                width: 70,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.white.withValues(alpha: 0.18),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              _isLoading
+                  ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2C1810)),
+                ),
+              )
+                  : Text(
+                l.t('logIn'),
+                style: const TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF2C1810),
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ════════ GUEST BUTTON ════════
+  Widget _buildGuestButton(double t, AppLocalizations l) {
+    return Transform.translate(
+      offset: Offset(0, (1 - _ease(t)) * 14),
+      child: Opacity(
+        opacity: _ease(t),
+        child: GestureDetector(
+          onTap: _guestLoading ? null : _continueAsGuest,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            decoration: BoxDecoration(
+              color: _cardColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _kAccent.withValues(alpha: 0.55), width: 1.2),
+              boxShadow: [
+                BoxShadow(color: _shadowColor, blurRadius: 12, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_guestLoading)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      valueColor: AlwaysStoppedAnimation<Color>(_kAccentDark),
+                    ),
+                  )
+                else ...[
+                  const Icon(Icons.fastfood_rounded, size: 18, color: _kAccentDark),
+                  const SizedBox(width: 8),
+                  Text(
+                    l.t('continueAsGuest'),
+                    style: const TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: _kAccentDark,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.arrow_forward_rounded, size: 16, color: _kAccentDark),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ════════ TEXT FIELD ════════
   Widget _buildTextField({
+    Key? key,
     required TextEditingController controller,
     required FocusNode focusNode,
     required String hint,
@@ -707,6 +1010,7 @@ class _LoginScreenState extends State<LoginScreen>
   }) {
     final focused = focusNode.hasFocus;
     return AnimatedContainer(
+      key: key,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
@@ -988,7 +1292,7 @@ class _LanguageSheet extends StatelessWidget {
 }
 
 // ════════════════════════════════════════════════════════
-// FLOATING DECOR (light mode only — dark uses AnimatedBackground)
+// FLOATING DECOR (light mode only)
 // ════════════════════════════════════════════════════════
 class _FloatingDecor extends StatelessWidget {
   const _FloatingDecor({required this.floatAnim});

@@ -57,5 +57,12 @@
   "changeRoleLater": "يمكنك تغيير ذلك في أي وقت من الإعدادات",
   "youreAllSet": "كل شيء جاهز!",
   "accountReadyAs": "حسابك جاهز بصفة",
-  "pleaseLogInToContinue": "يرجى تسجيل الدخول للمتابعة."
+  "pleaseLogInToContinue": "يرجى تسجيل الدخول للمتابعة.",
+  "continueAsGuest": "المتابعة كضيف",
+  "nameEntryTitle": "ما اسمك؟",
+  "nameEntrySubtitle": "هذا كيف سيظهر في ملفك الشخصي وطلباتك.",
+  "nameEntryHint": "أحمد حسن",
+  "continue": "متابعة",
+  "registerWithPhoneSub": "استلام رمز التحقق عبر الرسائل النصية",
+  "registerWithEmailSub": "التسجيل بالبريد الإلكتروني وكلمة مرور آمنة"
 }

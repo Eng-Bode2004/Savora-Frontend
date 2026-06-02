@@ -57,5 +57,12 @@
   "changeRoleLater": "Vous pouvez changer cela à tout moment dans les paramètres",
   "youreAllSet": "Tout est prêt !",
   "accountReadyAs": "Votre compte est prêt en tant que",
-  "pleaseLogInToContinue": "Veuillez vous connecter pour continuer."
+  "pleaseLogInToContinue": "Veuillez vous connecter pour continuer.",
+  "continueAsGuest": "Continuer en tant qu'invité",
+  "nameEntryTitle": "Comment vous appelez-vous ?",
+  "nameEntrySubtitle": "C'est ainsi qu'il apparaîtra sur votre profil et vos commandes.",
+  "nameEntryHint": "Jean Dupont",
+  "continue": "Continuer",
+  "registerWithPhoneSub": "Recevez un code de vérification par SMS",
+  "registerWithEmailSub": "Inscrivez-vous avec votre email et un mot de passe sécurisé"
 }

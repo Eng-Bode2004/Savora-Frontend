@@ -17,11 +17,13 @@ class OtpScreen extends StatefulWidget {
     required this.contact,
     this.isDarkMode = true,
     this.viaEmail = false,
+    this.onVerified,
   });
 
   final String contact;
   final bool isDarkMode;
   final bool viaEmail;
+  final VoidCallback? onVerified;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -97,6 +99,10 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       setState(() => _verifying = false);
+      if (widget.onVerified != null) {
+        widget.onVerified!();
+        return;
+      }
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (_, a, __) => const RoleSelectionScreen(),
