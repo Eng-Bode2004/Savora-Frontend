@@ -63,6 +63,12 @@
   "nameEntrySubtitle": "C'est ainsi qu'il apparaîtra sur votre profil et vos commandes.",
   "nameEntryHint": "Jean Dupont",
   "continue": "Continuer",
-  "registerWithPhoneSub": "Recevez un code de vérification par SMS",
+  "registerWithPhoneSub": "Recevez un code de vérification par SMS ou WhatsApp",
+  "chooseDeliveryTitle": "Comment recevoir votre code ?",
+  "chooseDeliverySubtitle": "Nous enverrons un code de vérification au ",
+  "whatsapp": "WhatsApp",
+  "whatsappSub": "Recevez le code par WhatsApp",
+  "sms": "SMS",
+  "smsSub": "Recevez le code par SMS",
   "registerWithEmailSub": "Inscrivez-vous avec votre email et un mot de passe sécurisé"
 }

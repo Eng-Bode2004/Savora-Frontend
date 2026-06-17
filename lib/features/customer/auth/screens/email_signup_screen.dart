@@ -11,6 +11,27 @@ const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
 const _kAccentDark = Color(0xFFD4952E);
 
+final _nameGen = math.Random();
+
+final List<String> _adjectives = [
+  'Chef', 'Foodie', 'Tasty', 'Yummy', 'Spicy', 'Savory', 'Zesty',
+  'Crispy', 'Juicy', 'Toasty', 'Frosty', 'Golden', 'Silky', 'Cozy',
+  'Urban', 'Fresh', 'Wild', 'Sunny', 'Moonlit', 'Stormy',
+];
+
+final List<String> _nouns = [
+  'Kitchen', 'Plate', 'Bowl', 'Spoon', 'Oven', 'Grill', 'Pan',
+  'Feast', 'Savor', 'Morsel', 'Taste', 'Aroma', 'Herb', 'Spice',
+  'Hearth', 'Table', 'Toast', 'Bake', 'Roast', 'Steam',
+];
+
+String generateUsername() {
+  final adj = _adjectives[_nameGen.nextInt(_adjectives.length)];
+  final noun = _nouns[_nameGen.nextInt(_nouns.length)];
+  final num = _nameGen.nextInt(999);
+  return '$adj$noun$num';
+}
+
 class EmailSignupScreen extends StatefulWidget {
   const EmailSignupScreen({super.key, this.isDarkMode = true});
 
@@ -23,18 +44,19 @@ class EmailSignupScreen extends StatefulWidget {
 class _EmailSignupScreenState extends State<EmailSignupScreen>
     with TickerProviderStateMixin {
   final _emailCtrl = TextEditingController();
-  final _nameCtrl = TextEditingController();
+  final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
 
   final _emailFocus = FocusNode();
-  final _nameFocus = FocusNode();
+  final _usernameFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _confirmFocus = FocusNode();
 
   late final AnimationController _entrance;
   late final AnimationController _float;
   late final AnimationController _shimmer;
+  late final AnimationController _genSpin;
 
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
@@ -55,8 +77,9 @@ class _EmailSignupScreenState extends State<EmailSignupScreen>
       ..repeat(reverse: true);
     _shimmer = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))
       ..repeat();
+    _genSpin = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
 
-    for (final f in [_emailFocus, _nameFocus, _passwordFocus, _confirmFocus]) {
+    for (final f in [_emailFocus, _usernameFocus, _passwordFocus, _confirmFocus]) {
       f.addListener(() => setState(() {}));
     }
     for (final c in [_passwordCtrl, _confirmCtrl]) {
@@ -73,15 +96,22 @@ class _EmailSignupScreenState extends State<EmailSignupScreen>
     _entrance.dispose();
     _float.dispose();
     _shimmer.dispose();
+    _genSpin.dispose();
     _emailCtrl.dispose();
-    _nameCtrl.dispose();
+    _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
     _emailFocus.dispose();
-    _nameFocus.dispose();
+    _usernameFocus.dispose();
     _passwordFocus.dispose();
     _confirmFocus.dispose();
     super.dispose();
+  }
+
+  void _generateUsername() {
+    HapticFeedback.lightImpact();
+    _genSpin.forward(from: 0);
+    setState(() => _usernameCtrl.text = generateUsername());
   }
 
   void _toggleDarkMode() {
@@ -101,7 +131,11 @@ class _EmailSignupScreenState extends State<EmailSignupScreen>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => OtpScreen(contact: _emailCtrl.text, isDarkMode: _isDarkMode),
+            builder: (_) => OtpScreen(
+            contact: _emailCtrl.text,
+            isDarkMode: _isDarkMode,
+            viaEmail: true,
+          ),
           ),
         );
       }
@@ -365,11 +399,47 @@ class _EmailSignupScreenState extends State<EmailSignupScreen>
             keyboardType: TextInputType.emailAddress,
           ),
           const SizedBox(height: 14),
-          _buildField(
-            controller: _nameCtrl,
-            focusNode: _nameFocus,
-            hint: l.t('fullName'),
-            icon: Icons.person_outline_rounded,
+          // Username + AI generate
+          Row(
+            children: [
+              Expanded(
+                child: _buildField(
+                  controller: _usernameCtrl,
+                  focusNode: _usernameFocus,
+                  hint: l.t('username'),
+                  icon: Icons.alternate_email_rounded,
+                ),
+              ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: _generateUsername,
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [_kAccentLight, _kAccent, _kAccentDark],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _kAccent.withValues(alpha: 0.30),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: AnimatedBuilder(
+                    animation: _genSpin,
+                    builder: (_, child) => Transform.rotate(
+                      angle: _genSpin.value * 2 * math.pi,
+                      child: child,
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded,
+                        color: Color(0xFF2C1810), size: 22),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           _buildField(

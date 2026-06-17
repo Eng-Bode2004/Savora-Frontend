@@ -5,7 +5,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/reveal.dart';
-import 'otp_screen.dart';
+import 'delivery_choice_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
 
@@ -61,17 +61,15 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen>
 
   bool get _valid => _phone.text.length >= 7;
 
-  // ★ FIX: route through OTP (was jumping to RoleSelectionScreen)
   void _continue() {
     FocusScope.of(context).unfocus();
     HapticFeedback.mediumImpact();
     final fullNumber = '+20 ${_phone.text}';
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => OtpScreen(
-          contact: fullNumber,
+        builder: (_) => DeliveryChoiceScreen(
+          phone: fullNumber,
           isDarkMode: _isDarkMode,
-          viaEmail: false, // phone OTP
         ),
       ),
     );

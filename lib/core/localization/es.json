@@ -63,6 +63,12 @@
   "nameEntrySubtitle": "Así aparecerá en tu perfil y pedidos.",
   "nameEntryHint": "Juan Pérez",
   "continue": "Continuar",
-  "registerWithPhoneSub": "Recibe un código de verificación por SMS",
+  "registerWithPhoneSub": "Recibe un código de verificación por SMS o WhatsApp",
+  "chooseDeliveryTitle": "¿Cómo recibir tu código?",
+  "chooseDeliverySubtitle": "Enviaremos un código de verificación a ",
+  "whatsapp": "WhatsApp",
+  "whatsappSub": "Recibe el código por WhatsApp",
+  "sms": "SMS",
+  "smsSub": "Recibe el código por mensaje de texto",
   "registerWithEmailSub": "Regístrate con correo electrónico y una contraseña segura"
 }

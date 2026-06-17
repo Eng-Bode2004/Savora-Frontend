@@ -17,12 +17,16 @@ class OtpScreen extends StatefulWidget {
     required this.contact,
     this.isDarkMode = true,
     this.viaEmail = false,
+    this.viaWhatsApp = false,
+    this.viaSms = false,
     this.onVerified,
   });
 
   final String contact;
   final bool isDarkMode;
   final bool viaEmail;
+  final bool viaWhatsApp;
+  final bool viaSms;
   final VoidCallback? onVerified;
 
   @override
@@ -287,7 +291,11 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
             ],
           ),
           child: Icon(
-            widget.viaEmail ? Icons.mark_email_read_rounded : Icons.sms_rounded,
+            widget.viaWhatsApp
+                ? Icons.chat_rounded
+                : widget.viaEmail
+                    ? Icons.mark_email_read_rounded
+                    : Icons.sms_rounded,
             color: const Color(0xFF2C1810),
             size: 38,
           ),

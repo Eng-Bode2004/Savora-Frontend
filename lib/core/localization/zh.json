@@ -63,6 +63,12 @@
   "nameEntrySubtitle": "这将显示在您的个人资料和订单中。",
   "nameEntryHint": "张三",
   "continue": "继续",
-  "registerWithPhoneSub": "通过短信接收验证码",
+  "registerWithPhoneSub": "通过短信或WhatsApp接收验证码",
+  "chooseDeliveryTitle": "如何接收验证码？",
+  "chooseDeliverySubtitle": "我们将发送验证码至 ",
+  "whatsapp": "WhatsApp",
+  "whatsappSub": "通过WhatsApp接收验证码",
+  "sms": "短信",
+  "smsSub": "通过短信接收验证码",
   "registerWithEmailSub": "使用电子邮件和安全密码注册"
 }

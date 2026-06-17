@@ -63,6 +63,12 @@
   "nameEntrySubtitle": "هذا كيف سيظهر في ملفك الشخصي وطلباتك.",
   "nameEntryHint": "أحمد حسن",
   "continue": "متابعة",
-  "registerWithPhoneSub": "استلام رمز التحقق عبر الرسائل النصية",
+  "registerWithPhoneSub": "استلام رمز التحقق عبر الرسائل النصية أو واتساب",
+  "chooseDeliveryTitle": "كيف تريد استلام الرمز؟",
+  "chooseDeliverySubtitle": "سنرسل رمز التحقق إلى ",
+  "whatsapp": "واتساب",
+  "whatsappSub": "استلام الرمز عبر واتساب",
+  "sms": "رسالة نصية",
+  "smsSub": "استلام الرمز عبر الرسائل النصية",
   "registerWithEmailSub": "التسجيل بالبريد الإلكتروني وكلمة مرور آمنة"
 }
