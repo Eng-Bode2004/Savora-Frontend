@@ -70,5 +70,10 @@
   "whatsappSub": "通过WhatsApp接收验证码",
   "sms": "短信",
   "smsSub": "通过短信接收验证码",
-  "registerWithEmailSub": "使用电子邮件和安全密码注册"
+  "registerWithEmailSub": "使用电子邮件和安全密码注册",
+  "createPasswordTitle": "创建密码",
+  "createPasswordSubtitle": "选择一个强密码来保护您的账户。",
+  "passwordHint": "至少8个字符",
+  "passwordsDontMatch": "密码不匹配",
+  "passwordTooShort": "密码必须至少为8个字符"
 }

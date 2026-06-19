@@ -4,13 +4,17 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/network/savora_api.dart';
+import '../../../../state/providers/auth_provider.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
 const _kAccentDark = Color(0xFFD4952E);
 
 class RoleSelectionScreen extends StatefulWidget {
-  const RoleSelectionScreen({super.key});
+  const RoleSelectionScreen({super.key, this.userId});
+
+  final String? userId;
 
   @override
   State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
@@ -23,11 +27,13 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   late final AnimationController _shimmer;
 
   bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  String? _roleError;
 
-  // roleKey = stored identity (English). titleKey/subtitleKey = localization keys.
-  // The `fallback*` strings are shown if a key is missing from AppLocalizations,
-  // so you NEVER see raw keys like "roleCustomer".
-  static const List<_RoleSpec> _roles = [
+  // Roles fetched from API, keyed by English key (Customer, Chef, Delivery)
+  List<Map<String, dynamic>> _fetchedRoles = [];
+
+  // Fallback hardcoded specs (used if API fails)
+  static const List<_RoleSpec> _fallbackRoles = [
     _RoleSpec(
       roleKey: 'Customer',
       titleKey: 'roleCustomer',
@@ -60,11 +66,94 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     ),
   ];
 
+  List<_RoleSpec> get _roles {
+    if (_fetchedRoles.isNotEmpty) {
+      return _fetchedRoles.map((r) {
+        final key = (r['key'] as String? ?? '').toLowerCase();
+        final fallback = _fallbackRoles.firstWhere(
+          (f) => f.roleKey.toLowerCase() == key,
+          orElse: () => _fallbackRoles.first,
+        );
+        final name = r['name'] as String? ?? fallback.fallbackTitle;
+        return _RoleSpec(
+          roleKey: r['key'] as String? ?? fallback.roleKey,
+          titleKey: fallback.titleKey,
+          subtitleKey: fallback.subtitleKey,
+          fallbackTitle: name,
+          fallbackSubtitle: fallback.fallbackSubtitle,
+          image: fallback.image,
+          icon: fallback.icon,
+          tint: fallback.tint,
+        );
+      }).toList();
+    }
+    return _fallbackRoles;
+  }
+
   // Returns the translation, or the fallback if the key is missing / echoed back.
   String _loc(AppLocalizations l, String key, String fallback) {
     final v = l.t(key);
     if (v.isEmpty || v == key) return fallback;
     return v;
+  }
+
+  Future<void> _fetchRoles() async {
+    try {
+      final lang = localeProvider.locale.languageCode;
+      final langMap = {
+        'en': 'english',
+        'ar': 'arabic',
+        'es': 'spanish',
+        'fr': 'french',
+        'zh': 'chinese',
+      };
+      final langFull = langMap[lang] ?? 'english';
+      final roles = await SavoraApi.getRolesByLanguage(langFull);
+      if (mounted) {
+        setState(() {
+          _fetchedRoles = roles;
+        });
+      }
+    } catch (_) {
+    }
+  }
+
+  Future<void> _assignRole(String roleId) async {
+    final userId = widget.userId;
+    if (userId == null || userId.isEmpty) return;
+
+    try {
+      await SavoraApi.assignRole(userId: userId, roleId: roleId);
+
+      // If Chef role, create chief profile with the stored name
+      final role = _roles.firstWhere(
+        (r) => r.roleKey == _getRoleKeyForId(roleId),
+        orElse: () => _roles.firstWhere((r) => true),
+      );
+      if (role.roleKey == 'Chef' && authState.name != null) {
+        final profileResult = await SavoraApi.createChiefProfile(authState.name!);
+        final profile = profileResult['profile'] as Map<String, dynamic>?;
+        final profileId = profile?['_id'] as String?;
+        if (profileId != null) {
+          await SavoraApi.assignProfile(userId: userId, profileId: profileId);
+        }
+      }
+
+      _showSuccessDialog(role.fallbackTitle);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _roleError = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
+    }
+  }
+
+  String _getRoleKeyForId(String roleId) {
+    for (final r in _fetchedRoles) {
+      if (r['_id'] == roleId) return r['key'] as String? ?? '';
+    }
+    return '';
   }
 
   @override
@@ -78,6 +167,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       ..repeat();
     _shimmer = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))
       ..repeat();
+    _fetchRoles();
   }
 
   @override
@@ -124,6 +214,30 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
   void _selectRole(String roleTitle) {
     HapticFeedback.mediumImpact();
+
+    if (_fetchedRoles.isNotEmpty) {
+      // Find the matching role in fetched roles to get its _id
+      final matchedSpec = _roles.firstWhere(
+        (s) => s.fallbackTitle == roleTitle || s.roleKey == roleTitle,
+        orElse: () => _roles.first,
+      );
+      final matchedRole = _fetchedRoles.firstWhere(
+        (r) => r['key'] == matchedSpec.roleKey,
+        orElse: () => _fetchedRoles.first,
+      );
+      final roleId = matchedRole['_id'] as String?;
+      if (roleId != null) {
+        _assignRole(roleId);
+        return;
+      }
+    }
+
+    // Fallback: just show success dialog without API
+    _showSuccessDialog(roleTitle);
+  }
+
+  void _showSuccessDialog(String roleTitle) {
+    HapticFeedback.heavyImpact();
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
@@ -194,6 +308,19 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                                       _reveal(0.32, 0.70, _buildRoleCard(l, _roles[1]), dy: 24),
                                       const SizedBox(height: 16),
                                       _reveal(0.40, 0.78, _buildRoleCard(l, _roles[2]), dy: 24),
+                                      if (_roleError != null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 8),
+                                          child: Text(
+                                            _roleError!,
+                                            style: const TextStyle(
+                                              color: Color(0xFFE0533D),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
                                       const Spacer(),
                                       _reveal(0.55, 1.0, _buildFooter(l)),
                                       const SizedBox(height: 20),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../state/providers/auth_provider.dart';
 import 'phone_entry_screen.dart';
 import 'email_signup_screen.dart';
 
@@ -91,6 +92,9 @@ class _RegistrationChoiceScreenState extends State<RegistrationChoiceScreen>
 
   void _chooseEmail() {
     HapticFeedback.mediumImpact();
+    if (widget.name.isNotEmpty) {
+      authState.setName(widget.name);
+    }
     Navigator.of(context).push(_route(EmailSignupScreen(isDarkMode: _isDarkMode)));
   }
 

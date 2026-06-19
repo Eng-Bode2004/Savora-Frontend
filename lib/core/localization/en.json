@@ -70,5 +70,10 @@
   "whatsappSub": "Get the code via WhatsApp message",
   "sms": "SMS",
   "smsSub": "Get the code via text message",
-  "registerWithEmailSub": "Sign up with email and a secure password"
+  "registerWithEmailSub": "Sign up with email and a secure password",
+  "createPasswordTitle": "Create a password",
+  "createPasswordSubtitle": "Choose a strong password to protect your account.",
+  "passwordHint": "At least 8 characters",
+  "passwordsDontMatch": "Passwords don't match",
+  "passwordTooShort": "Password must be at least 8 characters"
 }

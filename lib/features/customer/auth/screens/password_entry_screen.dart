@@ -5,27 +5,37 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_background.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../../shared/widgets/reveal.dart';
-import 'password_entry_screen.dart';
+import 'delivery_choice_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
 
-class PhoneEntryScreen extends StatefulWidget {
-  const PhoneEntryScreen({super.key, this.isDarkMode = true});
+class PasswordEntryScreen extends StatefulWidget {
+  const PasswordEntryScreen({
+    super.key,
+    required this.phone,
+    this.isDarkMode = true,
+  });
 
+  final String phone;
   final bool isDarkMode;
 
   @override
-  State<PhoneEntryScreen> createState() => _PhoneEntryScreenState();
+  State<PasswordEntryScreen> createState() => _PasswordEntryScreenState();
 }
 
-class _PhoneEntryScreenState extends State<PhoneEntryScreen>
+class _PasswordEntryScreenState extends State<PasswordEntryScreen>
     with TickerProviderStateMixin {
   late final AnimationController _entrance;
   late final AnimationController _float;
-  final TextEditingController _phone = TextEditingController();
-  final FocusNode _focus = FocusNode();
-  bool _focused = false;
-
+  final TextEditingController _passwordCtrl = TextEditingController();
+  final TextEditingController _confirmCtrl = TextEditingController();
+  final FocusNode _passwordFocus = FocusNode();
+  final FocusNode _confirmFocus = FocusNode();
+  bool _passwordFocused = false;
+  bool _confirmFocused = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+  String? _error;
   late bool _isDarkMode;
 
   Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
@@ -35,6 +45,7 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen>
   Color get _fieldBgColor => _isDarkMode ? AppColors.glass : const Color(0xFFF5F3EF);
   Color get _fieldBorderColor =>
       _isDarkMode ? AppColors.glassBorder : const Color(0xFFE8E4DE);
+  Color get _errorColor => _isDarkMode ? const Color(0xFFE57373) : const Color(0xFFD32F2F);
 
   @override
   void initState() {
@@ -46,29 +57,47 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen>
     )..forward();
     _float = AnimationController(vsync: this, duration: const Duration(seconds: 8))
       ..repeat(reverse: true);
-    _phone.addListener(() => setState(() {}));
-    _focus.addListener(() => setState(() => _focused = _focus.hasFocus));
+    _passwordCtrl.addListener(() => setState(() => _error = null));
+    _confirmCtrl.addListener(() => setState(() => _error = null));
+    _passwordFocus.addListener(() => setState(() => _passwordFocused = _passwordFocus.hasFocus));
+    _confirmFocus.addListener(() => setState(() => _confirmFocused = _confirmFocus.hasFocus));
   }
 
   @override
   void dispose() {
     _entrance.dispose();
     _float.dispose();
-    _phone.dispose();
-    _focus.dispose();
+    _passwordCtrl.dispose();
+    _confirmCtrl.dispose();
+    _passwordFocus.dispose();
+    _confirmFocus.dispose();
     super.dispose();
   }
 
-  bool get _valid => _phone.text.length >= 7;
+  bool get _valid {
+    final p = _passwordCtrl.text;
+    return p.length >= 8 && _confirmCtrl.text == p;
+  }
 
   void _continue() {
     FocusScope.of(context).unfocus();
+    final l = AppLocalizations.of(context);
+    final p = _passwordCtrl.text;
+    if (p.length < 8) {
+      setState(() => _error = l.t('passwordTooShort'));
+      HapticFeedback.mediumImpact();
+      return;
+    }
+    if (_confirmCtrl.text != p) {
+      setState(() => _error = l.t('passwordsDontMatch'));
+      HapticFeedback.mediumImpact();
+      return;
+    }
     HapticFeedback.mediumImpact();
-    final fullNumber = '+20 ${_phone.text}';
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PasswordEntryScreen(
-          phone: fullNumber,
+        builder: (_) => DeliveryChoiceScreen(
+          phone: widget.phone,
           isDarkMode: _isDarkMode,
         ),
       ),
@@ -98,7 +127,7 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen>
                       start: 0.0,
                       end: 0.6,
                       child: Text(
-                        l.t('whatsYourNumber'),
+                        l.t('createPasswordTitle'),
                         style: TextStyle(
                           color: _textColor,
                           fontSize: 30,
@@ -113,7 +142,7 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen>
                       start: 0.15,
                       end: 0.7,
                       child: Text(
-                        l.t('weWillTextYou'),
+                        l.t('createPasswordSubtitle'),
                         style: TextStyle(
                           color: _subTextColor,
                           fontSize: 15,
@@ -126,23 +155,63 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen>
                       controller: _entrance,
                       start: 0.3,
                       end: 0.85,
-                      child: _PhoneField(
-                        controller: _phone,
-                        focusNode: _focus,
-                        focused: _focused,
+                      child: _PasswordField(
+                        controller: _passwordCtrl,
+                        focusNode: _passwordFocus,
+                        focused: _passwordFocused,
+                        obscure: _obscurePassword,
+                        hint: l.t('password'),
+                        onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
                         isDark: _isDarkMode,
                         fieldBg: _fieldBgColor,
                         fieldBorder: _fieldBorderColor,
                         textColor: _textColor,
+                        subTextColor: _subTextColor,
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    Reveal(
+                      controller: _entrance,
+                      start: 0.4,
+                      end: 0.9,
+                      child: _PasswordField(
+                        controller: _confirmCtrl,
+                        focusNode: _confirmFocus,
+                        focused: _confirmFocused,
+                        obscure: _obscureConfirm,
+                        hint: l.t('confirmPassword'),
+                        onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                        isDark: _isDarkMode,
+                        fieldBg: _fieldBgColor,
+                        fieldBorder: _fieldBorderColor,
+                        textColor: _textColor,
+                        subTextColor: _subTextColor,
+                      ),
+                    ),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Reveal(
+                          controller: _entrance,
+                          start: 0.5,
+                          end: 1.0,
+                          child: Text(
+                            _error!,
+                            style: TextStyle(
+                              color: _errorColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
                     const Spacer(),
                     Reveal(
                       controller: _entrance,
-                      start: 0.45,
+                      start: 0.55,
                       end: 1.0,
                       child: PrimaryButton(
-                        label: l.t('sendCode'),
+                        label: l.t('continue'),
                         icon: Icons.arrow_forward_rounded,
                         onPressed: _valid ? _continue : null,
                       ),
@@ -224,22 +293,29 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen>
   }
 }
 
-class _PhoneField extends StatelessWidget {
-  const _PhoneField({
+class _PasswordField extends StatelessWidget {
+  const _PasswordField({
     required this.controller,
     required this.focusNode,
     required this.focused,
+    required this.obscure,
+    required this.hint,
+    required this.onToggle,
     required this.isDark,
     required this.fieldBg,
     required this.fieldBorder,
     required this.textColor,
+    required this.subTextColor,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool focused;
+  final bool obscure;
+  final String hint;
+  final VoidCallback onToggle;
   final bool isDark;
-  final Color fieldBg, fieldBorder, textColor;
+  final Color fieldBg, fieldBorder, textColor, subTextColor;
 
   @override
   Widget build(BuildContext context) {
@@ -256,60 +332,54 @@ class _PhoneField extends StatelessWidget {
         ),
         boxShadow: focused
             ? [
-          BoxShadow(
-            color: AppColors.saffron.withValues(alpha: 0.22),
-            blurRadius: 18,
-            spreadRadius: 1,
-          ),
-        ]
+                BoxShadow(
+                  color: AppColors.saffron.withValues(alpha: 0.22),
+                  blurRadius: 18,
+                  spreadRadius: 1,
+                ),
+              ]
             : null,
       ),
       child: Row(
         children: [
-          const Text('🇪🇬', style: TextStyle(fontSize: 22)),
-          const SizedBox(width: 8),
-          Text(
-            '+20',
-            style: TextStyle(
-              color: textColor,
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-            ),
+          Icon(
+            Icons.lock_outline_rounded,
+            color: focused ? AppColors.saffron : subTextColor,
+            size: 20,
           ),
-          Container(
-            width: 1,
-            height: 26,
-            margin: const EdgeInsets.symmetric(horizontal: 14),
-            color: fieldBorder,
-          ),
+          const SizedBox(width: 14),
           Expanded(
             child: TextField(
               controller: controller,
               focusNode: focusNode,
-              keyboardType: TextInputType.phone,
+              obscureText: obscure,
+              keyboardType: TextInputType.visiblePassword,
               cursorColor: AppColors.saffron,
               style: TextStyle(
                 color: textColor,
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
-                letterSpacing: 1.2,
+                letterSpacing: 0.5,
               ),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(11),
-              ],
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: '10 1234 5678',
+                hintText: hint,
                 hintStyle: TextStyle(
                   color: isDark
                       ? AppColors.muted
                       : const Color(0xFF8A8A8A).withValues(alpha: 0.6),
                   fontWeight: FontWeight.w500,
-                  letterSpacing: 1.2,
                 ),
                 counterText: '',
               ),
+            ),
+          ),
+          GestureDetector(
+            onTap: onToggle,
+            child: Icon(
+              obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              color: subTextColor,
+              size: 20,
             ),
           ),
         ],

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_background.dart';
+import '../../../../core/network/savora_api.dart';
 import 'role_selection_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
@@ -15,6 +16,7 @@ class OtpScreen extends StatefulWidget {
   const OtpScreen({
     super.key,
     required this.contact,
+    this.userId,
     this.isDarkMode = true,
     this.viaEmail = false,
     this.viaWhatsApp = false,
@@ -23,6 +25,7 @@ class OtpScreen extends StatefulWidget {
   });
 
   final String contact;
+  final String? userId;
   final bool isDarkMode;
   final bool viaEmail;
   final bool viaWhatsApp;
@@ -44,6 +47,8 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
   Timer? _timer;
   int _seconds = 45;
   bool _verifying = false;
+  bool _sendingOtp = false;
+  String? _otpError;
   late bool _isDarkMode;
 
   // ── theme ──
@@ -66,6 +71,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
       ..repeat();
     _code.addListener(() => setState(() {}));
     _startTimer();
+    _sendOtp();
     Future.delayed(const Duration(milliseconds: 450), () {
       if (mounted) _focus.requestFocus();
     });
@@ -95,33 +101,77 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
 
   bool get _complete => _code.text.length == _length;
 
-  void _verify() {
+  Future<void> _sendOtp() async {
+    final userId = widget.userId;
+    if (userId == null || userId.isEmpty) return;
+
+    setState(() => _sendingOtp = true);
+
+    try {
+      if (widget.viaEmail) {
+        await SavoraApi.sendOtpEmail(email: widget.contact, userId: userId);
+      } else if (widget.viaWhatsApp) {
+        await SavoraApi.sendOtpWhatsApp(phone: widget.contact, userId: userId);
+      } else {
+        await SavoraApi.sendOtpPhone(phone: widget.contact, userId: userId);
+      }
+      if (mounted) setState(() => _sendingOtp = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _sendingOtp = false;
+          _otpError = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
+    }
+  }
+
+  void _verify() async {
     FocusScope.of(context).unfocus();
     HapticFeedback.mediumImpact();
+
+    final userId = widget.userId;
+    if (userId == null || userId.isEmpty) {
+      _navigateAfterVerify();
+      return;
+    }
+
     setState(() => _verifying = true);
 
-    Future.delayed(const Duration(milliseconds: 1200), () {
+    try {
+      await SavoraApi.verifyOtp(userId: userId, otpCode: _code.text);
       if (!mounted) return;
       setState(() => _verifying = false);
-      if (widget.onVerified != null) {
-        widget.onVerified!();
-        return;
-      }
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, a, __) => const RoleSelectionScreen(),
-          transitionsBuilder: (_, a, __, child) => FadeTransition(
-            opacity: CurvedAnimation(parent: a, curve: Curves.easeOutExpo),
-            child: SlideTransition(
-              position: Tween(begin: const Offset(0, 0.06), end: Offset.zero)
-                  .animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
-              child: child,
-            ),
+      _navigateAfterVerify();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _verifying = false;
+        _otpError = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  void _navigateAfterVerify() {
+    HapticFeedback.heavyImpact();
+    if (widget.onVerified != null) {
+      widget.onVerified!();
+      return;
+    }
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, a, __) => RoleSelectionScreen(userId: widget.userId),
+        transitionsBuilder: (_, a, __, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: a, curve: Curves.easeOutExpo),
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, 0.06), end: Offset.zero)
+                .animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
+            child: child,
           ),
-          transitionDuration: const Duration(milliseconds: 500),
         ),
-      );
-    });
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
   }
 
   double _t(double start, double end) {
@@ -420,6 +470,7 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
       onTap: () {
         HapticFeedback.lightImpact();
         _startTimer();
+        _sendOtp();
       },
       child: Text(
         l.t('resendCode'),
@@ -435,53 +486,71 @@ class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
 
   // ════════ VERIFY BUTTON ════════
   Widget _buildVerifyButton(AppLocalizations l) {
-    final enabled = _complete && !_verifying;
-    return Opacity(
-      opacity: enabled ? 1 : 0.5,
-      child: GestureDetector(
-        onTap: enabled ? _verify : null,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment(-0.8, -1.0),
-              end: Alignment(0.8, 1.0),
-              colors: [_kAccentLight, _kAccent, _kAccentDark],
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: _kAccent.withValues(alpha: 0.3),
-                blurRadius: 16,
-                spreadRadius: -4,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Center(
-            child: _verifying
-                ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2C1810)),
-              ),
-            )
-                : Text(
-              l.t('verify'),
+    final enabled = _complete && !_verifying && !_sendingOtp;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_otpError != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              _otpError!,
               style: const TextStyle(
-                fontFamily: 'DM Sans',
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF2C1810),
-                letterSpacing: 0.3,
+                color: Color(0xFFE0533D),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        Opacity(
+          opacity: enabled ? 1 : 0.5,
+          child: GestureDetector(
+            onTap: enabled ? _verify : null,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment(-0.8, -1.0),
+                  end: Alignment(0.8, 1.0),
+                  colors: [_kAccentLight, _kAccent, _kAccentDark],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: _kAccent.withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    spreadRadius: -4,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: _verifying || _sendingOtp
+                    ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2C1810)),
+                  ),
+                )
+                    : Text(
+                  l.t('verify'),
+                  style: const TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2C1810),
+                    letterSpacing: 0.3,
+                  ),
+                ),
               ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

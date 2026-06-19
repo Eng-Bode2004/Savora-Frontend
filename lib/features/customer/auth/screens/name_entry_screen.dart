@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../state/providers/auth_provider.dart';
 import 'registration_choice_screen.dart';
 
 // ─── Accent palette ──────────────────────────────────────────────────────────
@@ -78,6 +79,7 @@ class _NameEntryScreenState extends State<NameEntryScreen>
   void _continue() {
     FocusScope.of(context).unfocus();
     HapticFeedback.mediumImpact();
+    authState.setName(_nameCtrl.text.trim());
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (_, a, __) =>

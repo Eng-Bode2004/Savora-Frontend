@@ -70,5 +70,10 @@
   "whatsappSub": "استلام الرمز عبر واتساب",
   "sms": "رسالة نصية",
   "smsSub": "استلام الرمز عبر الرسائل النصية",
-  "registerWithEmailSub": "التسجيل بالبريد الإلكتروني وكلمة مرور آمنة"
+  "registerWithEmailSub": "التسجيل بالبريد الإلكتروني وكلمة مرور آمنة",
+  "createPasswordTitle": "إنشاء كلمة مرور",
+  "createPasswordSubtitle": "اختر كلمة مرور قوية لحماية حسابك.",
+  "passwordHint": "8 أحرف على الأقل",
+  "passwordsDontMatch": "كلمتا المرور غير متطابقتين",
+  "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل"
 }

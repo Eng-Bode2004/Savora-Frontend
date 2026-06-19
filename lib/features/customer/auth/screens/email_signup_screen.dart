@@ -5,6 +5,8 @@ import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_background.dart';
+import '../../../../core/network/savora_api.dart';
+import '../../../../state/providers/auth_provider.dart';
 import 'otp_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
@@ -108,10 +110,19 @@ class _EmailSignupScreenState extends State<EmailSignupScreen>
     super.dispose();
   }
 
-  void _generateUsername() {
+  void _generateUsername() async {
     HapticFeedback.lightImpact();
     _genSpin.forward(from: 0);
-    setState(() => _usernameCtrl.text = generateUsername());
+    try {
+      final username = await SavoraApi.generateUsername();
+      if (username.isNotEmpty) {
+        setState(() => _usernameCtrl.text = username);
+      } else {
+        setState(() => _usernameCtrl.text = generateUsername());
+      }
+    } catch (_) {
+      setState(() => _usernameCtrl.text = generateUsername());
+    }
   }
 
   void _toggleDarkMode() {
@@ -122,24 +133,53 @@ class _EmailSignupScreenState extends State<EmailSignupScreen>
     });
   }
 
-  void _handleSignup() {
+  void _handleSignup() async {
     HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => OtpScreen(
-            contact: _emailCtrl.text,
+
+    try {
+      final email = _emailCtrl.text.trim();
+      final password = _passwordCtrl.text;
+      final username = _usernameCtrl.text.trim();
+
+      final result = await SavoraApi.registerEmail(
+        email: email,
+        password: password,
+        confirmPassword: password,
+        username: username.isNotEmpty ? username : null,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      final data = result['data'] as Map<String, dynamic>?;
+      final user = data?['user'] as Map<String, dynamic>?;
+      final userId = user?['_id'] as String? ?? '';
+      final token = data?['token'] as String? ?? '';
+      authState.login(userId: userId, email: email, token: token);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OtpScreen(
+            contact: email,
+            userId: userId,
             isDarkMode: _isDarkMode,
             viaEmail: true,
           ),
-          ),
-        );
-      }
-    });
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _goToLogin() {
