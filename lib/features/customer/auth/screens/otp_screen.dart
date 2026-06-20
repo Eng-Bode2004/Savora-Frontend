@@ -37,7 +37,7 @@ class OtpScreen extends StatefulWidget {
 }
 
 class _OtpScreenState extends State<OtpScreen> with TickerProviderStateMixin {
-  static const int _length = 5;
+  static const int _length = 6;
 
   late final AnimationController _entrance;
   late final AnimationController _float;

@@ -32,9 +32,12 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   // Roles fetched from API, keyed by English key (Customer, Chef, Delivery)
   List<Map<String, dynamic>> _fetchedRoles = [];
 
-  // Fallback hardcoded specs (used if API fails)
+  // Fallback hardcoded specs (used if API fails).
+  // Order must match the API's consistent return order:
+  //   [0] Customer, [1] Delivery, [2] Chief (spelled "Chief" in API → "Chef" internally)
   static const List<_RoleSpec> _fallbackRoles = [
     _RoleSpec(
+      id: null,
       roleKey: 'Customer',
       titleKey: 'roleCustomer',
       subtitleKey: 'roleCustomerSub',
@@ -45,16 +48,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       tint: Color(0xFFE8A838),
     ),
     _RoleSpec(
-      roleKey: 'Chef',
-      titleKey: 'roleChief',
-      subtitleKey: 'roleChiefSub',
-      fallbackTitle: 'Chef',
-      fallbackSubtitle: 'Share your cooking, manage your menu, and grow your kitchen',
-      image: 'assets/images/Chief.png',
-      icon: Icons.soup_kitchen_rounded,
-      tint: Color(0xFFE07A3D),
-    ),
-    _RoleSpec(
+      id: null,
       roleKey: 'Delivery',
       titleKey: 'roleDelivery',
       subtitleKey: 'roleDeliverySub',
@@ -64,24 +58,35 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       icon: Icons.delivery_dining_rounded,
       tint: Color(0xFF5BA46A),
     ),
+    _RoleSpec(
+      id: null,
+      roleKey: 'Chef',
+      titleKey: 'roleChief',
+      subtitleKey: 'roleChiefSub',
+      fallbackTitle: 'Chef',
+      fallbackSubtitle: 'Share your cooking, manage your menu, and grow your kitchen',
+      image: 'assets/images/Chief.png',
+      icon: Icons.soup_kitchen_rounded,
+      tint: Color(0xFFE07A3D),
+    ),
   ];
 
   List<_RoleSpec> get _roles {
     if (_fetchedRoles.isNotEmpty) {
-      return _fetchedRoles.map((r) {
-        final key = (r['key'] as String? ?? '').toLowerCase();
-        final fallback = _fallbackRoles.firstWhere(
-          (f) => f.roleKey.toLowerCase() == key,
-          orElse: () => _fallbackRoles.first,
-        );
-        final name = r['name'] as String? ?? fallback.fallbackTitle;
+      // Map by index — API always returns [Customer, Delivery, Chief] regardless of language
+      return _fetchedRoles.asMap().entries.map((entry) {
+        final r = entry.value;
+        final fallback = entry.key < _fallbackRoles.length
+            ? _fallbackRoles[entry.key]
+            : _fallbackRoles.first;
         return _RoleSpec(
-          roleKey: r['key'] as String? ?? fallback.roleKey,
+          id: r['id'] as String?,
+          roleKey: fallback.roleKey,
           titleKey: fallback.titleKey,
           subtitleKey: fallback.subtitleKey,
-          fallbackTitle: name,
+          fallbackTitle: r['name'] as String? ?? fallback.fallbackTitle,
           fallbackSubtitle: fallback.fallbackSubtitle,
-          image: fallback.image,
+          image: r['imageUrl'] as String? ?? fallback.image,
           icon: fallback.icon,
           tint: fallback.tint,
         );
@@ -99,7 +104,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
   Future<void> _fetchRoles() async {
     try {
-      final lang = localeProvider.locale.languageCode;
+      final userId = widget.userId;
+      final appLang = localeProvider.locale.languageCode;
       final langMap = {
         'en': 'english',
         'ar': 'arabic',
@@ -107,31 +113,36 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
         'fr': 'french',
         'zh': 'chinese',
       };
-      final langFull = langMap[lang] ?? 'english';
+      final langFull = langMap[appLang] ?? 'english';
+
+      // Sync the app's locale to the backend so the user's language is stored
+      if (userId != null && userId.isNotEmpty) {
+        try {
+          await SavoraApi.changeUserLanguage(userId: userId, language: langFull);
+        } catch (_) {}
+      }
+
+      // Fetch roles in the app's language
       final roles = await SavoraApi.getRolesByLanguage(langFull);
       if (mounted) {
         setState(() {
           _fetchedRoles = roles;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      if (mounted) setState(() => _roleError = e.toString().replaceFirst('Exception: ', ''));
     }
   }
 
-  Future<void> _assignRole(String roleId) async {
+  Future<void> _assignRole(String roleId, _RoleSpec spec) async {
     final userId = widget.userId;
     if (userId == null || userId.isEmpty) return;
 
     try {
       await SavoraApi.assignRole(userId: userId, roleId: roleId);
 
-      // If Chef role, create chief profile with the stored name
-      final role = _roles.firstWhere(
-        (r) => r.roleKey == _getRoleKeyForId(roleId),
-        orElse: () => _roles.firstWhere((r) => true),
-      );
-      if (role.roleKey == 'Chef' && authState.name != null) {
-        final profileResult = await SavoraApi.createChiefProfile(authState.name!);
+      if (spec.roleKey == 'Chef' && authState.name != null && authState.name!.trim().isNotEmpty) {
+        final profileResult = await SavoraApi.createChiefProfile(authState.name!.trim());
         final profile = profileResult['profile'] as Map<String, dynamic>?;
         final profileId = profile?['_id'] as String?;
         if (profileId != null) {
@@ -139,7 +150,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
         }
       }
 
-      _showSuccessDialog(role.fallbackTitle);
+      _showSuccessDialog(spec.fallbackTitle);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -147,13 +158,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
         });
       }
     }
-  }
-
-  String _getRoleKeyForId(String roleId) {
-    for (final r in _fetchedRoles) {
-      if (r['_id'] == roleId) return r['key'] as String? ?? '';
-    }
-    return '';
   }
 
   @override
@@ -212,28 +216,23 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     });
   }
 
-  void _selectRole(String roleTitle) {
+  void _selectRole(_RoleSpec spec) {
     HapticFeedback.mediumImpact();
 
-    if (_fetchedRoles.isNotEmpty) {
-      // Find the matching role in fetched roles to get its _id
-      final matchedSpec = _roles.firstWhere(
-        (s) => s.fallbackTitle == roleTitle || s.roleKey == roleTitle,
-        orElse: () => _roles.first,
-      );
-      final matchedRole = _fetchedRoles.firstWhere(
-        (r) => r['key'] == matchedSpec.roleKey,
-        orElse: () => _fetchedRoles.first,
-      );
-      final roleId = matchedRole['_id'] as String?;
-      if (roleId != null) {
-        _assignRole(roleId);
-        return;
-      }
+    final roleId = spec.id;
+    final userId = widget.userId;
+
+    if (roleId != null && userId != null) {
+      _assignRole(roleId, spec);
+      return;
     }
 
-    // Fallback: just show success dialog without API
-    _showSuccessDialog(roleTitle);
+    if (roleId == null && _fetchedRoles.isEmpty) {
+      setState(() => _roleError = 'Could not load roles from server');
+      return;
+    }
+
+    _showSuccessDialog(spec.fallbackTitle);
   }
 
   void _showSuccessDialog(String roleTitle) {
@@ -546,9 +545,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
   // ════════ ROLE CARD ════════
   Widget _buildRoleCard(AppLocalizations l, _RoleSpec spec) {
-    final title = _loc(l, spec.titleKey, spec.fallbackTitle);
     return _RoleCard(
-      title: title,
+      title: _loc(l, spec.titleKey, spec.fallbackTitle),
       subtitle: _loc(l, spec.subtitleKey, spec.fallbackSubtitle),
       spec: spec,
       isDark: _isDarkMode,
@@ -558,7 +556,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       textColor: _textColor,
       subTextColor: _subTextColor,
       shimmer: _shimmer,
-      onTap: () => _selectRole(title),
+      onTap: () => _selectRole(spec),
     );
   }
 
@@ -581,6 +579,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 // ════════════════════════════════════════════════════════
 class _RoleSpec {
   const _RoleSpec({
+    this.id,
     required this.roleKey,
     required this.titleKey,
     required this.subtitleKey,
@@ -590,6 +589,7 @@ class _RoleSpec {
     required this.icon,
     required this.tint,
   });
+  final String? id; // API role _id (null for fallback)
   final String roleKey;
   final String titleKey;
   final String subtitleKey;
@@ -705,13 +705,21 @@ class _RoleCardState extends State<_RoleCard> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: Image.asset(
-                      widget.spec.image,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Center(
-                        child: Icon(widget.spec.icon, color: tint, size: 28),
-                      ),
-                    ),
+                    child: widget.spec.image.startsWith('http')
+                        ? Image.network(
+                            widget.spec.image,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Icon(widget.spec.icon, color: tint, size: 28),
+                            ),
+                          )
+                        : Image.asset(
+                            widget.spec.image,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Icon(widget.spec.icon, color: tint, size: 28),
+                            ),
+                          ),
                   ),
                   const SizedBox(width: 18),
                   Expanded(

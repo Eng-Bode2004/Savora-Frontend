@@ -1,12 +1,23 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../state/providers/auth_provider.dart';
 
 class SavoraApi {
+  // Set to your local IP when testing OTP locally (e.g. 'http://192.168.1.100:5003')
+  // Set to null to use Railway production
+  // static const String? localOtpUrl = null;
+  static const String? localOtpUrl = 'http://192.168.1.6:5003';
+
+  static String get otpBase => localOtpUrl != null
+      ? '$localOtpUrl/api/v1/otp'
+      : 'https://savoraotp-services-production.up.railway.app/api/v1/otp';
+
   static const String userBase    = 'https://savorauser-services-production.up.railway.app/api/v1/users';
-  static const String otpBase     = 'https://savoraotp-services-production.up.railway.app/api/v1/otp';
   static const String roleBase    = 'https://savorarole-services-production.up.railway.app/api/v1/roles';
   static const String chiefBase   = 'https://savora-chiefprofileservices-production.up.railway.app/api/v2/chief-profile';
+
+  static const Duration _timeout = Duration(seconds: 15);
 
   static Map<String, String> get _headers => {'Content-Type': 'application/json'};
 
@@ -18,6 +29,15 @@ class SavoraApi {
     }
     return h;
   }
+
+  static Future<http.Response> _post(String url, {Map<String, String>? headers, Object? body}) =>
+      http.post(Uri.parse(url), headers: headers, body: body).timeout(_timeout);
+
+  static Future<http.Response> _get(String url, {Map<String, String>? headers}) =>
+      http.get(Uri.parse(url), headers: headers).timeout(_timeout);
+
+  static Future<http.Response> _put(String url, {Map<String, String>? headers, Object? body}) =>
+      http.put(Uri.parse(url), headers: headers, body: body).timeout(_timeout);
 
   // ── Auth ──────────────────────────────────────────────────────────────
 
@@ -34,11 +54,7 @@ class SavoraApi {
     };
     if (username != null && username.isNotEmpty) body['username'] = username;
 
-    final res = await http.post(
-      Uri.parse('$userBase/register/email'),
-      headers: _headers,
-      body: jsonEncode(body),
-    );
+    final res = await _post('$userBase/register/email', headers: _headers, body: jsonEncode(body));
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 201) return data;
@@ -46,10 +62,7 @@ class SavoraApi {
   }
 
   static Future<String> generateUsername() async {
-    final res = await http.get(
-      Uri.parse('$userBase/generate-username'),
-      headers: _headers,
-    );
+    final res = await _get('$userBase/generate-username', headers: _headers);
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) {
@@ -64,11 +77,7 @@ class SavoraApi {
     required String email,
     required String userId,
   }) async {
-    final res = await http.post(
-      Uri.parse('$otpBase/send/email'),
-      headers: _headers,
-      body: jsonEncode({'email': email, 'userID': userId}),
-    );
+    final res = await _post('$otpBase/send/email', headers: _headers, body: jsonEncode({'email': email, 'userID': userId}));
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
@@ -79,11 +88,7 @@ class SavoraApi {
     required String phone,
     required String userId,
   }) async {
-    final res = await http.post(
-      Uri.parse('$otpBase/send/phone'),
-      headers: _headers,
-      body: jsonEncode({'phone': phone, 'userID': userId}),
-    );
+    final res = await _post('$otpBase/send/phone', headers: _headers, body: jsonEncode({'phone': phone, 'userID': userId}));
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
@@ -94,11 +99,7 @@ class SavoraApi {
     required String phone,
     required String userId,
   }) async {
-    final res = await http.post(
-      Uri.parse('$otpBase/send/whatsapp'),
-      headers: _headers,
-      body: jsonEncode({'phone': phone, 'userID': userId}),
-    );
+    final res = await _post('$otpBase/send/whatsapp', headers: _headers, body: jsonEncode({'phone': phone, 'userID': userId}));
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
@@ -109,11 +110,7 @@ class SavoraApi {
     required String userId,
     required String otpCode,
   }) async {
-    final res = await http.post(
-      Uri.parse('$otpBase/verify'),
-      headers: _headers,
-      body: jsonEncode({'userID': userId, 'otp_code': otpCode}),
-    );
+    final res = await _post('$otpBase/verify', headers: _headers, body: jsonEncode({'userID': userId, 'otp_code': otpCode}));
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
@@ -123,10 +120,7 @@ class SavoraApi {
   // ── Roles ─────────────────────────────────────────────────────────────
 
   static Future<List<Map<String, dynamic>>> getRolesByLanguage(String lang) async {
-    final res = await http.get(
-      Uri.parse('$roleBase/language/$lang'),
-      headers: _headers,
-    );
+    final res = await _get('$roleBase/language/$lang', headers: _headers);
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) {
@@ -143,11 +137,7 @@ class SavoraApi {
     required String userId,
     required String roleId,
   }) async {
-    final res = await http.put(
-      Uri.parse('$userBase/$userId/role'),
-      headers: _authHeaders,
-      body: jsonEncode({'roleId': roleId}),
-    );
+    final res = await _put('$userBase/$userId/role', headers: _authHeaders, body: jsonEncode({'roleId': roleId}));
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
@@ -158,11 +148,7 @@ class SavoraApi {
     required String userId,
     required String profileId,
   }) async {
-    final res = await http.put(
-      Uri.parse('$userBase/$userId/profile'),
-      headers: _authHeaders,
-      body: jsonEncode({'profile': profileId}),
-    );
+    final res = await _put('$userBase/$userId/profile', headers: _authHeaders, body: jsonEncode({'profileId': profileId}));
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
@@ -170,10 +156,7 @@ class SavoraApi {
   }
 
   static Future<Map<String, dynamic>> getUserLanguage(String userId) async {
-    final res = await http.get(
-      Uri.parse('$userBase/$userId/language'),
-      headers: _authHeaders,
-    );
+    final res = await _get('$userBase/$userId/language', headers: _authHeaders);
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
@@ -184,11 +167,7 @@ class SavoraApi {
     required String userId,
     required String language,
   }) async {
-    final res = await http.put(
-      Uri.parse('$userBase/$userId/language'),
-      headers: _authHeaders,
-      body: jsonEncode({'language': language}),
-    );
+    final res = await _put('$userBase/$userId/language', headers: _authHeaders, body: jsonEncode({'language': language}));
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
@@ -198,11 +177,7 @@ class SavoraApi {
   // ── Chief Profile ─────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> createChiefProfile(String name) async {
-    final res = await http.post(
-      Uri.parse(chiefBase),
-      headers: _headers,
-      body: jsonEncode({'name': name}),
-    );
+    final res = await _post(chiefBase, headers: _headers, body: jsonEncode({'name': name}));
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 201) return data;
