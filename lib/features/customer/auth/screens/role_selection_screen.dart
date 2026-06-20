@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/network/savora_api.dart';
 import '../../../../state/providers/auth_provider.dart';
+import '../../../../core/routing/routes.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -258,8 +259,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
     Future.delayed(const Duration(milliseconds: 1800), () {
       if (!mounted) return;
-      Navigator.of(context).pop();
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      Navigator.of(context).pop(); // dismiss dialog
+      Navigator.of(context).pushReplacementNamed(Routes.chefCulinarySpecialty);
     });
   }
 

@@ -68,8 +68,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
   }
 
   void _finishSetup() {
-    Navigator.of(context)
-        .pushNamedAndRemoveUntil(Routes.chefShell, (route) => false);
+    Navigator.of(context).pushReplacementNamed(Routes.chefDailyOrders);
   }
 
   @override
@@ -138,7 +137,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
           ],
           const SizedBox(height: AppSpacing.sm),
           ChefPrimaryButton(
-            label: 'Finish Setup',
+            label: 'Submit Menu',
             onPressed: hasSelection ? _finishSetup : null,
           ),
         ],

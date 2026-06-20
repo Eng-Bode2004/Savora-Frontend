@@ -1,38 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:savora_app/core/routing/routes.dart';
 import 'package:savora_app/core/theme/app_colors.dart';
 import 'package:savora_app/core/theme/app_spacing.dart';
 import 'package:savora_app/core/theme/app_text_styles.dart';
-import 'package:savora_app/features/chef/auth/screens/Select%20Specialized%20Categories.dart';
-
-import '../../widgets/chef_ui_kit.dart';
-import '../models/verification_step.dart';
 import '../models/step_data.dart';
 
-/// Profile tab home: partner verification checklist + identity document
-/// upload.
-
-class PartnerVerificationScreen extends StatefulWidget {
-  const PartnerVerificationScreen({super.key});
+class IdPhotoScreen extends StatefulWidget {
+  const IdPhotoScreen({super.key});
 
   @override
-  State<PartnerVerificationScreen> createState() => _VerificationScreenState();
+  State<IdPhotoScreen> createState() => _IdPhotoScreenState();
 }
 
-class _VerificationScreenState extends State<PartnerVerificationScreen> {
-  bool _isFileSelected = false;
-  String _fileName = '';
+class _IdPhotoScreenState extends State<IdPhotoScreen> {
+  String? _frontFileName;
+  String? _backFileName;
+  bool _isFrontSelected = false;
+  bool _isBackSelected = false;
 
-  // Steps data
-  late final List<StepData> steps = [
+  // Stepper steps: Orders and Health Cert are completed (2 checkmarks)
+  // Identity is active, Location is not done.
+  final List<StepData> steps = [
     StepData(
         label: 'Orders',
         icon: Icons.motorcycle,
         isActive: false,
-        isCompleted: false,
-        isError: true),
+        isCompleted: true,
+        isError: false),
     StepData(
         label: 'Location',
         icon: Icons.map_outlined,
@@ -42,37 +37,42 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
     StepData(
         label: 'Identity',
         icon: Icons.badge_outlined,
-        isActive: false,
-        isCompleted: false,
-        isError: true),
-    StepData(
-        label: 'Health Cert',
-        icon: Icons.medical_information,
         isActive: true,
         isCompleted: false,
         isError: false),
+    StepData(
+        label: 'Health Cert',
+        icon: Icons.medical_information,
+        isActive: false,
+        isCompleted: true,
+        isError: false),
   ];
 
-  Future<void> _handleFileUpload() async {
+  Future<void> _pickImage(bool isFront) async {
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
       if (image != null) {
         setState(() {
-          _isFileSelected = true;
-          _fileName = image.name;
+          if (isFront) {
+            _isFrontSelected = true;
+            _frontFileName = image.name;
+          } else {
+            _isBackSelected = true;
+            _backFileName = image.name;
+          }
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Selected image: ${image.name}'),
+              content: Text('${isFront ? "Front" : "Back"} ID selected: ${image.name}'),
               backgroundColor: Colors.green,
             ),
           );
         }
       }
     } catch (e) {
-      debugPrint("Gallery error: $e");
+      debugPrint("Picker error: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -86,8 +86,10 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: color.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -96,8 +98,7 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
             // Main Content
             Expanded(
               child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -124,8 +125,7 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
         color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
         border: Border(
           bottom: BorderSide(
-            color:
-                Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
           ),
         ),
       ),
@@ -133,37 +133,18 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
         children: [
           const SizedBox(width: 8),
           // Back Button
-          _buildIconButton(
-            icon: Icons.arrow_back,
-            onTap: () => Navigator.of(context).pop(),
+          IconButton(
+            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () => Navigator.of(context).pop(),
           ),
           const SizedBox(width: 8),
           Text(
-            'Onboardsing',
+            'Identity Verification',
             style: _getTextStyle('headline-md').copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9999),
-        child: Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          child: Icon(icon, color: Theme.of(context).colorScheme.onSurface),
-        ),
       ),
     );
   }
@@ -190,12 +171,12 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
                     color: Theme.of(context).colorScheme.outlineVariant,
                   ),
                 ),
-                // Progress Line (up to step 4)
+                // Progress Line (up to step 3)
                 Positioned(
                   left: 0,
                   top: 20,
                   child: Container(
-                    width: totalWidth * 0.85,
+                    width: totalWidth * 0.65,
                     height: 2,
                     color: Theme.of(context).colorScheme.secondary,
                   ),
@@ -218,11 +199,10 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
             );
           },
         ),
-        // Labels (visible on larger screens)
         const SizedBox(height: 8),
+        // Labels
         LayoutBuilder(
           builder: (context, constraints) {
-            // Show labels only on wider screens
             if (constraints.maxWidth < 600) {
               return const SizedBox.shrink();
             }
@@ -241,8 +221,7 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
                         color: isActive
                             ? Theme.of(context).colorScheme.secondary
                             : Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontWeight:
-                            isActive ? FontWeight.bold : FontWeight.w600,
+                        fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -331,101 +310,115 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title Section
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Health Certificate',
-                style: _getTextStyle('headline-lg').copyWith(
-                  color: color.onSurface,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Please upload a clear, legible photo or scan of your valid food handler\'s certificate or local health permit.',
-                style: _getTextStyle('body-md').copyWith(
-                  color: color.onSurfaceVariant,
-                ),
-              ),
-            ],
+        // Title
+        Text(
+          'National ID Card Photo',
+          style: _getTextStyle('headline-lg').copyWith(
+            color: color.onSurface,
           ),
         ),
-        // Upload Dropzone
-        _buildUploadDropzone(context),
-        const SizedBox(height: 16),
-        // Primary Action Button
-        _buildSubmitButton(context),
+        const SizedBox(height: 4),
+        Text(
+          'Please upload clear photos of both the front and back of your national identity card.',
+          style: _getTextStyle('body-md').copyWith(
+            color: color.onSurfaceVariant,
+          ),
+        ),
         const SizedBox(height: 24),
-        // Contextual Information Card
-        _buildInfoCard(context),
+
+        // Front ID Card Upload
+        _buildUploadCard(
+          title: 'Front of ID Card',
+          isSelected: _isFrontSelected,
+          fileName: _frontFileName,
+          onTap: () => _pickImage(true),
+        ),
+        const SizedBox(height: 16),
+
+        // Back ID Card Upload
+        _buildUploadCard(
+          title: 'Back of ID Card',
+          isSelected: _isBackSelected,
+          fileName: _backFileName,
+          onTap: () => _pickImage(false),
+        ),
+        const SizedBox(height: 32),
+
+        // Submit Button
+        _buildSubmitButton(context),
       ],
     );
   }
 
-  Widget _buildUploadDropzone(BuildContext context) {
+  Widget _buildUploadCard({
+    required String title,
+    required bool isSelected,
+    required String? fileName,
+    required VoidCallback onTap,
+  }) {
     final color = Theme.of(context).colorScheme;
 
-    return GestureDetector(
-      onTap: _handleFileUpload,
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: _isFileSelected ? Colors.green : color.outlineVariant,
-            width: 2,
-            style: _isFileSelected ? BorderStyle.solid : BorderStyle.solid,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          color: _isFileSelected
-              ? Colors.green.withOpacity(0.05)
-              : color.surfaceVariant.withOpacity(0.5),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected ? Colors.green.withOpacity(0.5) : color.outlineVariant,
+          width: 2,
         ),
-        child: Column(
-          children: [
-            // Decorative Icon
-            Container(
-              width: double.infinity,
-              height: 64,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    spreadRadius: 2,
+        color: isSelected
+            ? Colors.green.withOpacity(0.02)
+            : color.surfaceVariant.withOpacity(0.1),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+            child: Column(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Icon(
-                _isFileSelected
-                    ? Icons.description_outlined
-                    : Icons.upload_file,
-                color: _isFileSelected ? Colors.green : color.secondary,
-                size: 32,
-              ),
+                  child: Icon(
+                    isSelected ? Icons.check_circle_outline : Icons.add_a_photo_outlined,
+                    color: isSelected ? Colors.green : color.secondary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  isSelected ? fileName ?? '' : 'Tap to upload $title',
+                  style: _getTextStyle('label-lg').copyWith(
+                    color: isSelected ? Colors.green : color.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isSelected ? 'Ready to upload' : 'Ensure all details on the card are clearly readable',
+                  style: _getTextStyle('body-sm').copyWith(
+                    color: color.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              _isFileSelected ? _fileName : 'Tap to upload document',
-              style: _getTextStyle('label-lg').copyWith(
-                color: _isFileSelected ? Colors.green : color.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _isFileSelected
-                  ? 'File ready to upload'
-                  : 'Supported formats: PDF, JPG, PNG\n(Max file size: 5MB)',
-              style: _getTextStyle('body-sm').copyWith(
-                color: color.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -433,134 +426,42 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
 
   Widget _buildSubmitButton(BuildContext context) {
     final color = Theme.of(context).colorScheme;
+    final isEnabled = _isFrontSelected && _isBackSelected;
 
     return Container(
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: color.secondary,
-        boxShadow: [
-          BoxShadow(
-            color: color.secondary.withOpacity(0.2),
-            blurRadius: 8,
-            spreadRadius: 2,
-          ),
-        ],
+        color: isEnabled ? color.secondary : Colors.grey.shade300,
+        boxShadow: isEnabled
+            ? [
+                BoxShadow(
+                  color: color.secondary.withOpacity(0.2),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                ),
+              ]
+            : null,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SelectSpecializedCategories(),
-              ),
-            );
-            if (result == true) {
-              setState(() {
-                // Step 0: Orders
-                steps[0].isCompleted = true;
-                steps[0].isError = false;
-
-                // Step 1: Location
-                steps[1].isCompleted = true;
-                steps[1].isError = false;
-
-                // Step 2: Identity
-                steps[2].isCompleted = true;
-                steps[2].isError = false;
-
-                // Step 3: Health Cert
-                steps[3].isCompleted = true;
-                steps[3].isError = false;
-              });
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('All verification steps completed!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            }
-          },
+          onTap: isEnabled
+              ? () {
+                  Navigator.of(context).pushReplacementNamed(Routes.chefLocationSelection);
+                }
+              : null,
           borderRadius: BorderRadius.circular(8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                _isFileSelected ? 'Submit Document' : 'Upload Certificate',
-                style: _getTextStyle('label-lg').copyWith(
-                  color: Colors.white,
-                ),
+          child: Center(
+            child: Text(
+              'Submit ID Card',
+              style: _getTextStyle('label-lg').copyWith(
+                color: isEnabled ? Colors.white : Colors.grey.shade600,
               ),
-              if (_isFileSelected) ...[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ],
-            ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.outlineVariant.withOpacity(0.3),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.secondary.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.verified_user,
-              color: color.secondary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Why we need this',
-                  style: _getTextStyle('label-lg').copyWith(
-                    color: color.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'To maintain trust and ensure the highest food safety standards for our customers, all Savora partners must hold and present a valid local health certificate before they can start accepting and preparing orders on the platform.',
-                  style: _getTextStyle('body-sm').copyWith(
-                    color: color.onSurfaceVariant,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -626,4 +527,3 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
     }
   }
 }
-

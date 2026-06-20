@@ -1,38 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:savora_app/core/routing/routes.dart';
 import 'package:savora_app/core/theme/app_colors.dart';
 import 'package:savora_app/core/theme/app_spacing.dart';
 import 'package:savora_app/core/theme/app_text_styles.dart';
-import 'package:savora_app/features/chef/auth/screens/Select%20Specialized%20Categories.dart';
-
-import '../../widgets/chef_ui_kit.dart';
-import '../models/verification_step.dart';
 import '../models/step_data.dart';
 
-/// Profile tab home: partner verification checklist + identity document
-/// upload.
+import '../models/verification_step.dart';
 
-class PartnerVerificationScreen extends StatefulWidget {
-  const PartnerVerificationScreen({super.key});
+class DailyOrdersScreen extends StatefulWidget {
+  const DailyOrdersScreen({super.key});
 
   @override
-  State<PartnerVerificationScreen> createState() => _VerificationScreenState();
+  State<DailyOrdersScreen> createState() => _DailyOrdersScreenState();
 }
 
-class _VerificationScreenState extends State<PartnerVerificationScreen> {
-  bool _isFileSelected = false;
-  String _fileName = '';
+class _DailyOrdersScreenState extends State<DailyOrdersScreen> {
+  int _selectedLimit = 15;
+  final List<int> _quickOptions = [5, 10, 15, 20, 30, 50];
 
-  // Steps data
-  late final List<StepData> steps = [
+  // Steps data - matches PartnerVerificationScreen
+  final List<StepData> steps = [
     StepData(
         label: 'Orders',
         icon: Icons.motorcycle,
-        isActive: false,
+        isActive: true,
         isCompleted: false,
-        isError: true),
+        isError: false),
     StepData(
         label: 'Location',
         icon: Icons.map_outlined,
@@ -48,46 +41,17 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
     StepData(
         label: 'Health Cert',
         icon: Icons.medical_information,
-        isActive: true,
-        isCompleted: false,
+        isActive: false,
+        isCompleted: true,
         isError: false),
   ];
 
-  Future<void> _handleFileUpload() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        setState(() {
-          _isFileSelected = true;
-          _fileName = image.name;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Selected image: ${image.name}'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint("Gallery error: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to open gallery: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: color.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -139,7 +103,7 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
           ),
           const SizedBox(width: 8),
           Text(
-            'Onboardsing',
+            'Daily Orders Limit',
             style: _getTextStyle('headline-md').copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -222,7 +186,6 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
         const SizedBox(height: 8),
         LayoutBuilder(
           builder: (context, constraints) {
-            // Show labels only on wider screens
             if (constraints.maxWidth < 600) {
               return const SizedBox.shrink();
             }
@@ -338,14 +301,14 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Health Certificate',
+                'Daily Orders Limit',
                 style: _getTextStyle('headline-lg').copyWith(
                   color: color.onSurface,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Please upload a clear, legible photo or scan of your valid food handler\'s certificate or local health permit.',
+                'Choose how many orders you want to receive and prepare per day to maintain top culinary quality.',
                 style: _getTextStyle('body-md').copyWith(
                   color: color.onSurfaceVariant,
                 ),
@@ -353,9 +316,9 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
             ],
           ),
         ),
-        // Upload Dropzone
-        _buildUploadDropzone(context),
-        const SizedBox(height: 16),
+        // Limit Counter Section
+        _buildLimitSelector(context),
+        const SizedBox(height: 24),
         // Primary Action Button
         _buildSubmitButton(context),
         const SizedBox(height: 24),
@@ -365,68 +328,104 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
     );
   }
 
-  Widget _buildUploadDropzone(BuildContext context) {
+  Widget _buildLimitSelector(BuildContext context) {
     final color = Theme.of(context).colorScheme;
 
-    return GestureDetector(
-      onTap: _handleFileUpload,
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: _isFileSelected ? Colors.green : color.outlineVariant,
-            width: 2,
-            style: _isFileSelected ? BorderStyle.solid : BorderStyle.solid,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: color.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.outlineVariant.withOpacity(0.5),
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Maximum Daily Orders',
+            style: _getTextStyle('label-lg').copyWith(
+              color: color.onSurfaceVariant,
+            ),
           ),
-          borderRadius: BorderRadius.circular(12),
-          color: _isFileSelected
-              ? Colors.green.withOpacity(0.05)
-              : color.surfaceVariant.withOpacity(0.5),
-        ),
-        child: Column(
-          children: [
-            // Decorative Icon
-            Container(
-              width: double.infinity,
-              height: 64,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    spreadRadius: 2,
+          const SizedBox(height: 12),
+          // Plus Minus Counter
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildCounterButton(
+                icon: Icons.remove,
+                onPressed: _selectedLimit > 1
+                    ? () => setState(() => _selectedLimit--)
+                    : null,
+              ),
+              const SizedBox(width: 24),
+              Container(
+                constraints: const BoxConstraints(minWidth: 80),
+                alignment: Alignment.center,
+                child: Text(
+                  '$_selectedLimit',
+                  style: const TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
+                ),
               ),
-              child: Icon(
-                _isFileSelected
-                    ? Icons.description_outlined
-                    : Icons.upload_file,
-                color: _isFileSelected ? Colors.green : color.secondary,
-                size: 32,
+              const SizedBox(width: 24),
+              _buildCounterButton(
+                icon: Icons.add,
+                onPressed: () => setState(() => _selectedLimit++),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _isFileSelected ? _fileName : 'Tap to upload document',
-              style: _getTextStyle('label-lg').copyWith(
-                color: _isFileSelected ? Colors.green : color.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _isFileSelected
-                  ? 'File ready to upload'
-                  : 'Supported formats: PDF, JPG, PNG\n(Max file size: 5MB)',
-              style: _getTextStyle('body-sm').copyWith(
-                color: color.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Quick Select Grid
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: _quickOptions.map((opt) {
+              final isSelected = _selectedLimit == opt;
+              return ChoiceChip(
+                label: Text('$opt orders'),
+                selected: isSelected,
+                onSelected: (val) {
+                  if (val) setState(() => _selectedLimit = opt);
+                },
+                selectedColor: color.secondary,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : color.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCounterButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+  }) {
+    final color = Theme.of(context).colorScheme;
+
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: onPressed != null
+            ? color.secondary.withOpacity(0.1)
+            : Colors.grey.shade200,
+      ),
+      child: IconButton(
+        icon: Icon(icon,
+            color: onPressed != null ? color.secondary : Colors.grey),
+        onPressed: onPressed,
+        iconSize: 28,
       ),
     );
   }
@@ -451,60 +450,17 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SelectSpecializedCategories(),
-              ),
-            );
-            if (result == true) {
-              setState(() {
-                // Step 0: Orders
-                steps[0].isCompleted = true;
-                steps[0].isError = false;
-
-                // Step 1: Location
-                steps[1].isCompleted = true;
-                steps[1].isError = false;
-
-                // Step 2: Identity
-                steps[2].isCompleted = true;
-                steps[2].isError = false;
-
-                // Step 3: Health Cert
-                steps[3].isCompleted = true;
-                steps[3].isError = false;
-              });
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('All verification steps completed!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            }
+          onTap: () {
+            Navigator.of(context).pushReplacementNamed(Routes.chefIdPhoto);
           },
           borderRadius: BorderRadius.circular(8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                _isFileSelected ? 'Submit Document' : 'Upload Certificate',
-                style: _getTextStyle('label-lg').copyWith(
-                  color: Colors.white,
-                ),
+          child: Center(
+            child: Text(
+              'Submit Daily Limit',
+              style: _getTextStyle('label-lg').copyWith(
+                color: Colors.white,
               ),
-              if (_isFileSelected) ...[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -544,14 +500,14 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Why we need this',
+                  'Why this matters',
                   style: _getTextStyle('label-lg').copyWith(
                     color: color.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'To maintain trust and ensure the highest food safety standards for our customers, all Savora partners must hold and present a valid local health certificate before they can start accepting and preparing orders on the platform.',
+                  'Setting a realistic daily order capacity helps you stay in control of your kitchen workload and ensures high food safety and customer satisfaction standards.',
                   style: _getTextStyle('body-sm').copyWith(
                     color: color.onSurfaceVariant,
                     height: 1.5,
@@ -626,4 +582,3 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
     }
   }
 }
-

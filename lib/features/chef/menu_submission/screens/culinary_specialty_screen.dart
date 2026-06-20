@@ -160,7 +160,7 @@ class _CulinarySpecialtyScreenState extends State<CulinarySpecialtyScreen> {
             icon: Icons.arrow_forward_rounded,
             onPressed: _selected.isEmpty
                 ? null
-                : () => Navigator.of(context).pushNamed(Routes.chefMenuSelection),
+                : () => Navigator.of(context).pushReplacementNamed(Routes.chefMenuSelection),
           ),
         ],
       ),

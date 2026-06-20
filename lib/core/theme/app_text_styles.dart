@@ -1,93 +1,72 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-/// Centralised text styles — referenced by every chef screen via
-/// `AppTextStyles.headlineLg`, etc.
 class AppTextStyles {
   AppTextStyles._();
 
-  // ── Display ──
-  static const TextStyle displayLg = TextStyle(
-    fontSize: 32,
-    fontWeight: FontWeight.w700,
-    height: 1.2,
-  );
+  static TextStyle get titleLg => GoogleFonts.plusJakartaSans(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+      );
 
-  // ── Headlines ──
-  static const TextStyle headlineLg = TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w700,
-    height: 1.25,
-  );
+  static TextStyle get labelSm => GoogleFonts.plusJakartaSans(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      );
 
-  static const TextStyle headlineMd = TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.w700,
-    height: 1.3,
-  );
+  static TextStyle get labelLg => GoogleFonts.plusJakartaSans(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      );
 
-  static const TextStyle headlineSm = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w700,
-    height: 1.3,
-  );
+  static TextStyle get button => GoogleFonts.plusJakartaSans(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+      );
 
-  // ── Titles ──
-  static const TextStyle titleLg = TextStyle(
-    fontSize: 17,
-    fontWeight: FontWeight.w600,
-    height: 1.3,
-  );
+  static TextStyle get overline => GoogleFonts.plusJakartaSans(
+        fontSize: 10,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1.0,
+      );
 
-  static const TextStyle titleMd = TextStyle(
-    fontSize: 15,
-    fontWeight: FontWeight.w600,
-    height: 1.3,
-  );
+  static TextStyle get headlineMd => GoogleFonts.plusJakartaSans(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      );
 
-  // ── Body ──
-  static const TextStyle bodyMd = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    height: 1.45,
-  );
+  static TextStyle get bodySm => GoogleFonts.plusJakartaSans(
+        fontSize: 14,
+        fontWeight: FontWeight.normal,
+      );
 
-  static const TextStyle bodySm = TextStyle(
-    fontSize: 13,
-    fontWeight: FontWeight.w400,
-    height: 1.4,
-  );
+  static TextStyle get headlineLg => GoogleFonts.plusJakartaSans(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      );
 
-  // ── Labels ──
-  static const TextStyle labelLg = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    height: 1.2,
-  );
+  static TextStyle get displayLg => GoogleFonts.plusJakartaSans(
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+      );
 
-  static const TextStyle labelMd = TextStyle(
-    fontSize: 13,
-    fontWeight: FontWeight.w600,
-    height: 1.2,
-  );
+  static TextStyle get headlineSm => GoogleFonts.plusJakartaSans(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      );
 
-  static const TextStyle labelSm = TextStyle(
-    fontSize: 11,
-    fontWeight: FontWeight.w600,
-    height: 1.2,
-  );
+  static TextStyle get bodyMd => GoogleFonts.plusJakartaSans(
+        fontSize: 16,
+        fontWeight: FontWeight.normal,
+      );
 
-  // ── Overline ──
-  static const TextStyle overline = TextStyle(
-    fontSize: 11,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 1.2,
-    height: 1.3,
-  );
+  static TextStyle get titleMd => GoogleFonts.plusJakartaSans(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      );
 
-  // ── Button ──
-  static const TextStyle button = TextStyle(
-    fontSize: 15,
-    fontWeight: FontWeight.w700,
-    height: 1.2,
-  );
+  static TextStyle get labelMd => GoogleFonts.plusJakartaSans(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      );
 }
