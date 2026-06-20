@@ -16,6 +16,8 @@ class SavoraApi {
   static const String userBase    = 'https://savorauser-services-production.up.railway.app/api/v1/users';
   static const String roleBase    = 'https://savorarole-services-production.up.railway.app/api/v1/roles';
   static const String chiefBase   = 'https://savora-chiefprofileservices-production.up.railway.app/api/v2/chief-profile';
+  static const String dishBase    = 'https://savoradish-services-production.up.railway.app/api/v1/dishes';
+  static const String prefChiefBase = 'https://savorapreferreddisheschief-services-production.up.railway.app/api/v1/preferred-dishes-chief';
 
   static const Duration _timeout = Duration(seconds: 15);
 
@@ -38,6 +40,9 @@ class SavoraApi {
 
   static Future<http.Response> _put(String url, {Map<String, String>? headers, Object? body}) =>
       http.put(Uri.parse(url), headers: headers, body: body).timeout(_timeout);
+
+  static Future<http.Response> _delete(String url, {Map<String, String>? headers}) =>
+      http.delete(Uri.parse(url), headers: headers).timeout(_timeout);
 
   // ── Auth ──────────────────────────────────────────────────────────────
 
@@ -208,6 +213,93 @@ class SavoraApi {
   static Future<Map<String, dynamic>> getChiefProfile(String id) async {
     final res = await _get('$chiefBase/$id', headers: _authHeaders);
 
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Dishes ───────────────────────────────────────────────────────────—
+
+  static Future<Map<String, dynamic>> createDish(Map<String, dynamic> dish) async {
+    final res = await _post(dishBase, headers: _headers, body: jsonEncode(dish));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 201) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> getAllDishes() async {
+    final res = await _get(dishBase, headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> getDishById(String id) async {
+    final res = await _get('$dishBase/$id', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> getDishesBySubcategory(String subcategoryId) async {
+    final res = await _get('$dishBase/by-subcategory/$subcategoryId', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> updateDish(String id, Map<String, dynamic> dish) async {
+    final res = await _put('$dishBase/$id', headers: _headers, body: jsonEncode(dish));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> deleteDish(String id) async {
+    final res = await _delete('$dishBase/$id', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Preferred Dishes Chief ───────────────────────────────────────────—
+
+  static Future<Map<String, dynamic>> setPreferredDish({
+    required String chiefId,
+    required String dishId,
+    bool preferred = true,
+  }) async {
+    final res = await _post('$prefChiefBase/preferred', headers: _headers, body: jsonEncode({
+      'chiefId': chiefId, 'dishId': dishId, 'preferred': preferred,
+    }));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> getPreferredDishes(String chiefId) async {
+    final res = await _get('$prefChiefBase/preferred/$chiefId', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> setDailyAvailability({
+    required String chiefId,
+    required String dishId,
+    required String date,
+    required int piecesAvailable,
+  }) async {
+    final res = await _post('$prefChiefBase/availability', headers: _headers, body: jsonEncode({
+      'chiefId': chiefId, 'dishId': dishId, 'date': date, 'piecesAvailable': piecesAvailable,
+    }));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> getDashboard(String date) async {
+    final res = await _get('$prefChiefBase/dashboard/$date', headers: _headers);
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
     throw Exception(_extractError(data));
