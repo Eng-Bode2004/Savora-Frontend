@@ -16,6 +16,8 @@ const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
 const _kAccentDark = Color(0xFFD4952E);
 
+const _apiToRoleKey = {'Chief': 'Chef'};
+
 enum _LoginMethod { phone, account }
 
 class LoginScreen extends StatefulWidget {
@@ -142,14 +144,13 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  void _enterShell({String? roleKey}) {
+  void _enterShell({String? roleKey, int chefTab = 0}) {
     Widget page;
     switch (roleKey) {
       case 'Chef':
-        page = const ChefShell();
+        page = ChefShell(initialIndex: chefTab);
         break;
       case 'Delivery':
-        // No Delivery shell yet — send to customer as fallback
         page = const CustomerShell();
         break;
       default:
@@ -211,11 +212,44 @@ class _LoginScreenState extends State<LoginScreen>
       final userId = user?['_id'] as String? ?? '';
       final roleData = data?['role'] as Map<String, dynamic>?;
       final englishName = roleData?['english_name'] as String?;
+      final roleKey = _apiToRoleKey[englishName] ?? englishName ?? 'Customer';
+      final profileId = user?['profile'] as String?;
 
-      authState.login(userId: userId, email: email, token: token);
+      authState.login(userId: userId, email: email, token: token, roleKey: roleKey);
 
+      int chefTab = 0;
+      // Fetch role-specific profile
+      if (profileId != null && profileId.isNotEmpty) {
+        try {
+          if (roleKey == 'Chef') {
+            final profile = await SavoraApi.getChiefProfile(profileId);
+            if (mounted) {
+              final profileObj = profile['profile'] as Map<String, dynamic>?;
+              if (profileObj != null) {
+                authState.setProfileData(profileObj);
+                authState.setProfileId(profileObj['_id'] as String? ?? profileId);
+                final pName = profileObj['name'] as String?;
+                if (pName != null && pName.trim().isNotEmpty) {
+                  authState.setName(pName);
+                }
+                if (profileObj['Is_Verified'] != true) {
+                  chefTab = 3;
+                }
+              }
+            }
+          }
+          // Future: Customer profile
+          // else if (englishName == 'Customer') { ... }
+          // Future: Delivery profile
+          // else if (englishName == 'Delivery') { ... }
+        } catch (_) {
+          // Profile fetch failed — continue with login anyway
+        }
+      }
+
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      _enterShell(roleKey: englishName);
+      _enterShell(roleKey: roleKey, chefTab: chefTab);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);

@@ -205,6 +205,14 @@ class SavoraApi {
     throw Exception(_extractError(data));
   }
 
+  static Future<Map<String, dynamic>> getChiefProfile(String id) async {
+    final res = await _get('$chiefBase/$id', headers: _authHeaders);
+
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────
 
   static String _extractError(Map<String, dynamic> data) {

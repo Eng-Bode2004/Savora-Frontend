@@ -9,14 +9,12 @@ class ChefBottomNavItem {
   final String label;
 }
 
-/// Bottom navigation bar shared by every top-level Chef tab (Orders, Menu,
-/// Earnings, Profile). The active tab renders inside a soft gold pill,
-/// matching the partner dashboard design.
 class ChefBottomNav extends StatelessWidget {
   const ChefBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.lockedIndices = const {},
   });
 
   static const List<ChefBottomNavItem> items = [
@@ -28,6 +26,7 @@ class ChefBottomNav extends StatelessWidget {
 
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final Set<int> lockedIndices;
 
   @override
   Widget build(BuildContext context) {
@@ -48,10 +47,23 @@ class ChefBottomNav extends StatelessWidget {
           child: Row(
             children: List.generate(items.length, (i) {
               final selected = i == currentIndex;
+              final locked = lockedIndices.contains(i);
               final item = items[i];
               return Expanded(
                 child: InkWell(
-                  onTap: () => onTap(i),
+                  onTap: locked
+                      ? () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                  'Complete verification to unlock this section'),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: AppColors.amber,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      : () => onTap(i),
                   child: Center(
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
@@ -67,15 +79,23 @@ class ChefBottomNav extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            item.icon,
+                            locked ? Icons.lock_outline_rounded : item.icon,
                             size: 22,
-                            color: selected ? AppColors.clay : inactive,
+                            color: locked
+                                ? inactive.withValues(alpha: 0.5)
+                                : selected
+                                    ? AppColors.clay
+                                    : inactive,
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            item.label,
+                            locked ? 'Locked' : item.label,
                             style: AppTextStyles.labelSm.copyWith(
-                              color: selected ? AppColors.clay : inactive,
+                              color: locked
+                                  ? inactive.withValues(alpha: 0.5)
+                                  : selected
+                                      ? AppColors.clay
+                                      : inactive,
                             ),
                           ),
                         ],
