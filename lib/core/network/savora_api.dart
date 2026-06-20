@@ -234,6 +234,13 @@ class SavoraApi {
     throw Exception(_extractError(data));
   }
 
+  static Future<Map<String, dynamic>> getDishesByLanguage(String lang) async {
+    final res = await _get('$dishBase/language/$lang', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
   static Future<Map<String, dynamic>> getDishById(String id) async {
     final res = await _get('$dishBase/$id', headers: _headers);
     final data = jsonDecode(res.body) as Map<String, dynamic>;
