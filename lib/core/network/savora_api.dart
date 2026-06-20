@@ -41,6 +41,20 @@ class SavoraApi {
 
   // ── Auth ──────────────────────────────────────────────────────────────
 
+  static Future<Map<String, dynamic>> loginUser({
+    required String identifier,
+    required String password,
+  }) async {
+    final res = await _post('$userBase/login', headers: _headers, body: jsonEncode({
+      'identifier': identifier,
+      'password': password,
+    }));
+
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
   static Future<Map<String, dynamic>> registerEmail({
     required String email,
     required String password,
@@ -118,6 +132,13 @@ class SavoraApi {
   }
 
   // ── Roles ─────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getRoleById(String id) async {
+    final res = await _get('$roleBase/$id', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
 
   static Future<List<Map<String, dynamic>>> getRolesByLanguage(String lang) async {
     final res = await _get('$roleBase/language/$lang', headers: _headers);

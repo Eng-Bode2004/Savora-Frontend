@@ -5,7 +5,10 @@ import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../shared/widgets/animated_background.dart';
+import '../../../../core/network/savora_api.dart';
+import '../../../../state/providers/auth_provider.dart';
 import '../../shell/customer_shell.dart';
+import '../../../chef/shell/chef_shell.dart';
 import 'name_entry_screen.dart' show NameEntryScreen;
 import 'otp_screen.dart';
 
@@ -139,10 +142,23 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  void _enterShell() {
+  void _enterShell({String? roleKey}) {
+    Widget page;
+    switch (roleKey) {
+      case 'Chef':
+        page = const ChefShell();
+        break;
+      case 'Delivery':
+        // No Delivery shell yet — send to customer as fallback
+        page = const CustomerShell();
+        break;
+      default:
+        page = const CustomerShell();
+    }
+
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
-        pageBuilder: (_, a, __) => const CustomerShell(),
+        pageBuilder: (_, a, __) => page,
         transitionsBuilder: (_, a, __, child) => FadeTransition(
           opacity: CurvedAnimation(parent: a, curve: Curves.easeOutExpo),
           child: SlideTransition(
@@ -169,18 +185,48 @@ class _LoginScreenState extends State<LoginScreen>
             contact: fullNumber,
             isDarkMode: _isDarkMode,
             viaEmail: false,
-            onVerified: _enterShell,
+            onVerified: () => _enterShell(),
           ),
         ),
       );
       return;
     }
+    _doLoginWithEmail();
+  }
+
+  Future<void> _doLoginWithEmail() async {
+    final email = _userController.text.trim();
+    final password = _passController.text;
+    if (email.isEmpty || password.isEmpty) return;
+
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(seconds: 2), () {
+
+    try {
+      final result = await SavoraApi.loginUser(identifier: email, password: password);
+      if (!mounted) return;
+
+      final data = result['data'] as Map<String, dynamic>?;
+      final user = data?['user'] as Map<String, dynamic>?;
+      final token = data?['token'] as String? ?? '';
+      final userId = user?['_id'] as String? ?? '';
+      final roleData = data?['role'] as Map<String, dynamic>?;
+      final englishName = roleData?['english_name'] as String?;
+
+      authState.login(userId: userId, email: email, token: token);
+
+      setState(() => _isLoading = false);
+      _enterShell(roleKey: englishName);
+    } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      _enterShell();
-    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   // ★ Guest mode — straight into the customer app, no auth.
