@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:savora_app/features/chef/shell/chef_shell.dart';
+import 'package:savora_app/features/customer/auth/screens/splash_screen.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_notifier.dart';
 import 'core/localization/app_localizations.dart';
-import 'features/customer/auth/screens/splash_screen.dart';
+import 'core/routing/app_router.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +59,9 @@ class _SavoraAppState extends State<SavoraApp> {
         GlobalWidgetsLocalizations.delegate,
       ],
       home: const SplashScreen(),
+//ChefShell
+
+      onGenerateRoute: AppRouter.onGenerateRoute,
     );
   }
 }

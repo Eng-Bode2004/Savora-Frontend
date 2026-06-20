@@ -37,9 +37,36 @@ class AppColors {
   static const Color glassStrong = Color(0x1FFFFFFF);
   static const Color glassBorder = Color(0x26FFFFFF);
 
+  // --- Semantic ---
+  static const Color success = Color(0xFF4CAF50);
+
   static const LinearGradient accentGradient = LinearGradient(
     colors: [saffron, terracotta],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  // ────────────────────────────────────────────
+  //  Brightness-adaptive helpers
+  // ────────────────────────────────────────────
+
+  /// Primary text color.
+  static Color textOf(Brightness brightness) =>
+      brightness == Brightness.dark ? cream : darkText;
+
+  /// Secondary / muted text color.
+  static Color textMutedOf(Brightness brightness) =>
+      brightness == Brightness.dark ? creamDim : softText;
+
+  /// Elevated card surface.
+  static Color surfaceOf(Brightness brightness) =>
+      brightness == Brightness.dark ? espressoSoft : white;
+
+  /// Sunken / page-level background behind cards.
+  static Color surfaceSunkenOf(Brightness brightness) =>
+      brightness == Brightness.dark ? espresso : offWhite;
+
+  /// Subtle borders / dividers.
+  static Color borderOf(Brightness brightness) =>
+      brightness == Brightness.dark ? glassBorder : lightBorder;
 }
