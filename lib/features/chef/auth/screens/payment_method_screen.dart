@@ -1,23 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 
-class HealthCertificateScreen extends StatefulWidget {
-  const HealthCertificateScreen({super.key});
+class PaymentMethodScreen extends StatefulWidget {
+  const PaymentMethodScreen({super.key});
 
   @override
-  State<HealthCertificateScreen> createState() =>
-      _HealthCertificateScreenState();
+  State<PaymentMethodScreen> createState() => _PaymentMethodScreenState();
 }
 
-class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
-  bool _fileSelected = false;
+class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
+  final _bankCtrl = TextEditingController();
+  final _accountCtrl = TextEditingController();
+  final _holderCtrl = TextEditingController();
 
-  void _browseFiles() => setState(() => _fileSelected = true);
+  @override
+  void dispose() {
+    _bankCtrl.dispose();
+    _accountCtrl.dispose();
+    _holderCtrl.dispose();
+    super.dispose();
+  }
 
-  void _upload() {
-    if (!_fileSelected) {
+  void _submit() {
+    if (_bankCtrl.text.isEmpty ||
+        _accountCtrl.text.isEmpty ||
+        _holderCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select a certificate file first.')),
+        const SnackBar(content: Text('Please fill in all fields.')),
       );
       return;
     }
@@ -39,13 +48,28 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
                   const SizedBox(height: 8),
                   _buildHeader(),
                   const SizedBox(height: 24),
-                  _buildInfoCard(),
+                  _buildBankCard(),
+                  const SizedBox(height: 16),
+                  _buildField(
+                    controller: _bankCtrl,
+                    label: 'Bank Name',
+                    hint: 'e.g. National Bank of Egypt',
+                  ),
+                  const SizedBox(height: 14),
+                  _buildField(
+                    controller: _accountCtrl,
+                    label: 'Account Number',
+                    hint: 'Enter your account number',
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 14),
+                  _buildField(
+                    controller: _holderCtrl,
+                    label: 'Account Holder Name',
+                    hint: 'Full name as it appears on the account',
+                  ),
                   const SizedBox(height: 24),
-                  _buildUploadZone(),
-                  const SizedBox(height: 24),
-                  _buildUploadButton(),
-                  const SizedBox(height: 12),
-                  _buildSupportLink(),
+                  _buildSubmitButton(),
                 ],
               ),
             ),
@@ -74,7 +98,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
           ),
           const SizedBox(width: 4),
           Text(
-            'Health Certificate',
+            'Payment Method',
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontSize: 18,
@@ -92,7 +116,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Upload Health Certificate',
+          'Payment Details',
           style: TextStyle(
             fontFamily: 'DM Sans',
             fontSize: 22,
@@ -103,7 +127,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
         ),
         const SizedBox(height: 6),
         Text(
-          'Please upload your valid food handler or hygiene certification.',
+          'Enter your bank account details to receive payments.',
           style: TextStyle(
             fontFamily: 'DM Sans',
             fontSize: 14,
@@ -116,7 +140,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
     );
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildBankCard() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -135,7 +159,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
               color: kVfAccent.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.info_outline, color: kVfAccent, size: 19),
+            child: Icon(Icons.account_balance, color: kVfAccent, size: 19),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -143,7 +167,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Why is this required?',
+                  'Secure & Encrypted',
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 14,
@@ -153,7 +177,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "To maintain Savora's high standards and ensure safety, we verify that all partner chefs hold current health and safety credentials.",
+                  'Your banking information is encrypted and never shared.',
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 12,
@@ -170,80 +194,68 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
     );
   }
 
-  Widget _buildUploadZone() {
-    return GestureDetector(
-      onTap: _browseFiles,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-        decoration: BoxDecoration(
-          color: kVfWhite,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: _fileSelected ? kVfGreen : kVfBorder,
-            width: _fileSelected ? 1.5 : 1,
+  Widget _buildField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: kVfDarkText,
           ),
         ),
-        child: Column(
-          children: [
-            Icon(
-              _fileSelected
-                  ? Icons.check_circle_outline_rounded
-                  : Icons.cloud_upload_outlined,
-              color: _fileSelected ? kVfGreen : kVfAccent,
-              size: 48,
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 14,
+              color: kVfLightText,
             ),
-            const SizedBox(height: 16),
-            Text(
-              _fileSelected
-                  ? 'certificate_scan.pdf selected'
-                  : 'Tap to upload certificate',
-              style: TextStyle(
-                fontFamily: 'DM Sans',
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: kVfDarkText,
-              ),
+            filled: true,
+            fillColor: kVfWhite,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: kVfBorder),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Supports PDF, JPG, or PNG (Max 5MB)',
-              style: TextStyle(
-                fontFamily: 'DM Sans',
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-                color: kVfMutedText,
-              ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: kVfBorder),
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: kVfAccent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Browse Files',
-                style: TextStyle(
-                  fontFamily: 'DM Sans',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: kVfAccent,
-                ),
-              ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: kVfAccent, width: 1.5),
             ),
-          ],
+          ),
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: kVfDarkText,
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildUploadButton() {
+  Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: _upload,
+        onPressed: _submit,
         style: ElevatedButton.styleFrom(
           backgroundColor: kVfAccent,
           foregroundColor: const Color(0xFF2C1810),
@@ -253,29 +265,11 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
           ),
         ),
         child: Text(
-          'Upload Certificate',
+          'Save Payment Info',
           style: TextStyle(
             fontFamily: 'DM Sans',
             fontSize: 15,
             fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSupportLink() {
-    return Center(
-      child: GestureDetector(
-        onTap: () {},
-        child: Text(
-          'Need help? Contact Support',
-          style: TextStyle(
-            fontFamily: 'DM Sans',
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: kVfAccent,
-            decoration: TextDecoration.underline,
           ),
         ),
       ),

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:savora_app/core/routing/routes.dart';
-import 'package:savora_app/core/theme/app_colors.dart';
-import 'package:savora_app/core/theme/app_spacing.dart';
-import 'package:savora_app/core/theme/app_text_styles.dart';
+import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 import '../models/step_data.dart';
 
 class IdPhotoScreen extends StatefulWidget {
@@ -66,7 +64,7 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${isFront ? "Front" : "Back"} ID selected: ${image.name}'),
-              backgroundColor: Colors.green,
+              backgroundColor: kVfGreen,
             ),
           );
         }
@@ -86,10 +84,8 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: color.surface,
+      backgroundColor: kVfBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -122,10 +118,10 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+        color: kVfWhite,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+            color: kVfBorder.withValues(alpha: 0.6),
           ),
         ),
       ),
@@ -134,14 +130,14 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
           const SizedBox(width: 8),
           // Back Button
           IconButton(
-            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.arrow_back, color: kVfDarkText),
             onPressed: () => Navigator.of(context).pop(),
           ),
           const SizedBox(width: 8),
           Text(
             'Identity Verification',
             style: _getTextStyle('headline-md').copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
+              color: kVfDarkText,
             ),
           ),
         ],
@@ -168,7 +164,7 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
                   top: 20,
                   child: Container(
                     height: 2,
-                    color: Theme.of(context).colorScheme.outlineVariant,
+                    color: kVfBorder,
                   ),
                 ),
                 // Progress Line (up to step 3)
@@ -178,7 +174,7 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
                   child: Container(
                     width: totalWidth * 0.65,
                     height: 2,
-                    color: Theme.of(context).colorScheme.secondary,
+                    color: kVfAccent,
                   ),
                 ),
                 // Nodes
@@ -219,7 +215,7 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
                       step.label,
                       style: _getTextStyle('label-md').copyWith(
                         color: isActive
-                            ? Theme.of(context).colorScheme.secondary
+                            ? kVfAccent
                             : Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
                       ),
@@ -256,15 +252,15 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
       borderSide = const BorderSide(color: Colors.red, width: 2);
       displayIcon = Icons.close;
     } else if (isCompleted) {
-      nodeBgColor = color.secondary;
+      nodeBgColor = kVfAccent;
       iconColor = Colors.white;
-      borderSide = BorderSide(color: color.secondary, width: 2);
+      borderSide = BorderSide(color: kVfAccent, width: 2);
       displayIcon = Icons.check;
     } else {
-      nodeBgColor = color.surface;
-      iconColor = isActive ? color.secondary : color.onSurfaceVariant;
+      nodeBgColor = kVfBackground;
+      iconColor = isActive ? kVfAccent : color.onSurfaceVariant;
       borderSide = BorderSide(
-        color: isActive ? color.secondary : color.outlineVariant,
+        color: isActive ? kVfAccent : kVfBorder,
         width: 2,
       );
       displayIcon = step.icon;
@@ -284,7 +280,7 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: color.secondary.withOpacity(0.1),
+                        color: kVfAccent.withOpacity(0.1),
                         blurRadius: 8,
                         spreadRadius: 4,
                       ),
@@ -314,7 +310,7 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
         Text(
           'National ID Card Photo',
           style: _getTextStyle('headline-lg').copyWith(
-            color: color.onSurface,
+            color: kVfDarkText,
           ),
         ),
         const SizedBox(height: 4),
@@ -363,12 +359,12 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isSelected ? Colors.green.withOpacity(0.5) : color.outlineVariant,
+          color: isSelected ? kVfGreen.withValues(alpha: 0.5) : kVfBorder,
           width: 2,
         ),
         color: isSelected
-            ? Colors.green.withOpacity(0.02)
-            : color.surfaceVariant.withOpacity(0.1),
+            ? kVfGreen.withValues(alpha: 0.02)
+            : kVfBorder.withOpacity(0.1),
       ),
       child: Material(
         color: Colors.transparent,
@@ -383,11 +379,11 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: kVfWhite,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: kVfDarkText.withValues(alpha: 0.05),
                         blurRadius: 8,
                         spreadRadius: 2,
                       ),
@@ -395,7 +391,7 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
                   ),
                   child: Icon(
                     isSelected ? Icons.check_circle_outline : Icons.add_a_photo_outlined,
-                    color: isSelected ? Colors.green : color.secondary,
+                    color: isSelected ? kVfGreen : kVfAccent,
                     size: 28,
                   ),
                 ),
@@ -403,7 +399,7 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
                 Text(
                   isSelected ? fileName ?? '' : 'Tap to upload $title',
                   style: _getTextStyle('label-lg').copyWith(
-                    color: isSelected ? Colors.green : color.onSurface,
+                    color: isSelected ? kVfGreen : kVfDarkText,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -425,7 +421,6 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
   }
 
   Widget _buildSubmitButton(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
     final isEnabled = _isFrontSelected && _isBackSelected;
 
     return Container(
@@ -433,11 +428,11 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
       height: 56,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: isEnabled ? color.secondary : Colors.grey.shade300,
+        color: isEnabled ? kVfAccent : Colors.grey.shade300,
         boxShadow: isEnabled
             ? [
                 BoxShadow(
-                  color: color.secondary.withOpacity(0.2),
+                  color: kVfAccent.withOpacity(0.2),
                   blurRadius: 8,
                   spreadRadius: 2,
                 ),

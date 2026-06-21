@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 import 'package:savora_app/core/routing/routes.dart';
-import 'package:savora_app/core/theme/app_colors.dart';
-import 'package:savora_app/core/theme/app_spacing.dart';
-import 'package:savora_app/core/theme/app_text_styles.dart';
 import '../models/step_data.dart';
 
 class LocationSelectionScreen extends StatefulWidget {
@@ -56,10 +54,8 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: color.surface,
+      backgroundColor: kVfBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -92,10 +88,10 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+        color: kVfWhite,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+            color: kVfBorder.withValues(alpha: 0.6),
           ),
         ),
       ),
@@ -103,14 +99,14 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         children: [
           const SizedBox(width: 8),
           IconButton(
-            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
-            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(Icons.arrow_back, color: kVfDarkText),
+            onPressed: () => Navigator.of(context).pop(true),
           ),
           const SizedBox(width: 8),
           Text(
             'Kitchen Location',
             style: _getTextStyle('headline-md').copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
+              color: kVfDarkText,
             ),
           ),
         ],
@@ -135,7 +131,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   top: 20,
                   child: Container(
                     height: 2,
-                    color: Theme.of(context).colorScheme.outlineVariant,
+                    color: kVfBorder,
                   ),
                 ),
                 Positioned(
@@ -144,7 +140,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   child: Container(
                     width: totalWidth * 0.4,
                     height: 2,
-                    color: Theme.of(context).colorScheme.secondary,
+                    color: kVfAccent,
                   ),
                 ),
                 Row(
@@ -183,7 +179,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                       step.label,
                       style: _getTextStyle('label-md').copyWith(
                         color: isActive
-                            ? Theme.of(context).colorScheme.secondary
+                            ? kVfAccent
                             : Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
                       ),
@@ -220,15 +216,15 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
       borderSide = const BorderSide(color: Colors.red, width: 2);
       displayIcon = Icons.close;
     } else if (isCompleted) {
-      nodeBgColor = color.secondary;
+      nodeBgColor = kVfAccent;
       iconColor = Colors.white;
-      borderSide = BorderSide(color: color.secondary, width: 2);
+      borderSide = BorderSide(color: kVfAccent, width: 2);
       displayIcon = Icons.check;
     } else {
-      nodeBgColor = color.surface;
-      iconColor = isActive ? color.secondary : color.onSurfaceVariant;
+      nodeBgColor = kVfBackground;
+      iconColor = isActive ? kVfAccent : color.onSurfaceVariant;
       borderSide = BorderSide(
-        color: isActive ? color.secondary : color.outlineVariant,
+        color: isActive ? kVfAccent : kVfBorder,
         width: 2,
       );
       displayIcon = step.icon;
@@ -248,7 +244,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: color.secondary.withOpacity(0.1),
+                        color: kVfAccent.withOpacity(0.1),
                         blurRadius: 8,
                         spreadRadius: 4,
                       ),
@@ -277,7 +273,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         Text(
           'Select Kitchen Location',
           style: _getTextStyle('headline-lg').copyWith(
-            color: color.onSurface,
+            color: kVfDarkText,
           ),
         ),
         const SizedBox(height: 4),
@@ -297,7 +293,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         Text(
           'Address Details',
           style: _getTextStyle('label-lg').copyWith(
-            color: color.onSurface,
+            color: kVfDarkText,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -346,7 +342,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.outlineVariant),
+          border: Border.all(color: kVfBorder),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -381,13 +377,13 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: color.onSurface,
+                        color: kVfDarkText,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         'Kitchen Location',
                         style: TextStyle(
-                          color: color.surface,
+                          color: kVfBackground,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -395,7 +391,7 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                     ),
                     Icon(
                       Icons.location_on,
-                      color: color.primary,
+                      color: kVfAccent,
                       size: 40,
                     ),
                   ],
@@ -461,23 +457,23 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey.shade400),
             filled: true,
-            fillColor: color.surfaceVariant.withOpacity(0.2),
+            fillColor: kVfWhite,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: color.outlineVariant),
+              borderSide: BorderSide(color: kVfBorder),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: color.outlineVariant),
+              borderSide: BorderSide(color: kVfBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: color.secondary, width: 2),
+              borderSide: BorderSide(color: kVfAccent, width: 2),
             ),
           ),
           style: _getTextStyle('body-md').copyWith(
-            color: color.onSurface,
+            color: kVfDarkText,
           ),
         ),
       ],
@@ -505,9 +501,9 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: color.surfaceVariant.withOpacity(0.2),
+            color: kVfWhite,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.outlineVariant),
+            border: Border.all(color: kVfBorder),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -529,7 +525,6 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
   }
 
   Widget _buildConfirmButton(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
     final isEnabled = _streetController.text.isNotEmpty && _buildingController.text.isNotEmpty;
 
     return Container(
@@ -537,11 +532,11 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
       height: 56,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: isEnabled ? color.secondary : Colors.grey.shade300,
+        color: isEnabled ? kVfAccent : Colors.grey.shade300,
         boxShadow: isEnabled
             ? [
                 BoxShadow(
-                  color: color.secondary.withOpacity(0.2),
+                  color: kVfAccent.withOpacity(0.2),
                   blurRadius: 8,
                   spreadRadius: 2,
                 ),

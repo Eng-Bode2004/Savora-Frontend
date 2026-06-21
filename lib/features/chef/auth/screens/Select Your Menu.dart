@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 
 class MenuSelectionScreen extends StatefulWidget {
   const MenuSelectionScreen({super.key});
@@ -63,22 +63,12 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
     });
   }
 
-  void _handleFinish() {
-    final selectedItems = menuItems.where((item) => item.isSelected).toList();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Selected ${selectedItems.length} menu items'),
-        backgroundColor: Theme.of(context).colorScheme.secondary,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: kVfBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -120,10 +110,10 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: colorScheme.surface.withOpacity(0.8),
+        color: kVfWhite,
         border: Border(
           bottom: BorderSide(
-            color: colorScheme.outlineVariant.withOpacity(0.3),
+            color: kVfBorder.withValues(alpha: 0.6),
           ),
         ),
       ),
@@ -138,7 +128,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.arrow_back),
-                  color: colorScheme.primary,
+                  color: kVfAccent,
                   style: IconButton.styleFrom(
                     padding: const EdgeInsets.all(8),
                   ),
@@ -147,7 +137,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
                 Text(
                   'Savora Partner',
                   style: _getTextStyle('headline-lg').copyWith(
-                    color: colorScheme.primary,
+                    color: kVfAccent,
                   ),
                 ),
               ],
@@ -169,7 +159,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
                 IconButton(
                   onPressed: () {},
                   icon: const Icon(Icons.help_outline),
-                  color: colorScheme.primary,
+                  color: kVfAccent,
                   style: IconButton.styleFrom(
                     padding: const EdgeInsets.all(8),
                   ),
@@ -192,7 +182,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
           child: Text(
             'Step 3 of 3',
             style: _getTextStyle('label-lg').copyWith(
-              color: colorScheme.secondary,
+              color: kVfAccent,
               letterSpacing: 1.2,
             ),
           ),
@@ -200,7 +190,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
         Text(
           'Menu Selection',
           style: _getTextStyle('display-lg').copyWith(
-            color: colorScheme.onSurface,
+            color: kVfDarkText,
           ),
         ),
         const SizedBox(height: 8),
@@ -233,7 +223,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
           Expanded(
             child: Container(
               height: 2,
-              color: colorScheme.secondary,
+              color: kVfAccent,
             ),
           ),
           // Step 2: Categories
@@ -246,7 +236,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
           Expanded(
             child: Container(
               height: 2,
-              color: colorScheme.secondary,
+              color: kVfAccent,
             ),
           ),
           // Step 3: Menu
@@ -277,16 +267,16 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isCompleted
-                ? colorScheme.secondary
+                ? kVfAccent
                 : isActive
-                    ? colorScheme.surface
-                    : colorScheme.surface,
+                    ? kVfBackground
+                    : kVfBackground,
             border: Border.all(
               color: isCompleted
-                  ? colorScheme.secondary
+                  ? kVfAccent
                   : isActive
-                      ? colorScheme.secondary
-                      : colorScheme.outlineVariant,
+                      ? kVfAccent
+                      : kVfBorder,
               width: 2,
             ),
           ),
@@ -296,7 +286,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
               color: isCompleted
                   ? Colors.white
                   : isActive
-                      ? colorScheme.secondary
+                      ? kVfAccent
                       : colorScheme.onSurfaceVariant,
               size: 24,
             ),
@@ -307,7 +297,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
           label,
           style: _getTextStyle('label-md').copyWith(
             color:
-                isActive ? colorScheme.secondary : colorScheme.onSurfaceVariant,
+                isActive ? kVfAccent : colorScheme.onSurfaceVariant,
             fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
           ),
         ),
@@ -324,7 +314,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: colorScheme.outlineVariant.withOpacity(0.3),
+                color: kVfBorder.withOpacity(0.3),
               ),
             ),
           ),
@@ -335,14 +325,14 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
                 children: [
                   Icon(
                     Icons.kebab_dining,
-                    color: colorScheme.primary,
+                    color: kVfAccent,
                     size: 28,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Egyptian Grills',
                     style: _getTextStyle('headline-md').copyWith(
-                      color: colorScheme.onSurface,
+                      color: kVfDarkText,
                     ),
                   ),
                 ],
@@ -412,8 +402,8 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: item.isSelected
-                  ? colorScheme.secondary
-                  : colorScheme.outlineVariant.withOpacity(0.5),
+                  ? kVfAccent
+                  : kVfBorder.withOpacity(0.5),
               width: item.isSelected ? 2 : 1,
             ),
             boxShadow: [
@@ -436,12 +426,12 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: item.isSelected
-                        ? colorScheme.secondary
+                        ? kVfAccent
                         : Colors.transparent,
                     border: Border.all(
                       color: item.isSelected
-                          ? colorScheme.secondary
-                          : colorScheme.outlineVariant,
+                          ? kVfAccent
+                          : kVfBorder,
                       width: 2,
                     ),
                   ),
@@ -462,7 +452,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
                     Text(
                       item.name,
                       style: _getTextStyle('headline-sm').copyWith(
-                        color: colorScheme.onSurface,
+                        color: kVfDarkText,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -491,7 +481,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
                           child: Text(
                             tag,
                             style: _getTextStyle('label-md').copyWith(
-                              color: colorScheme.onSurface,
+                              color: kVfDarkText,
                             ),
                           ),
                         );
@@ -510,7 +500,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
                   decoration: BoxDecoration(
                     color: colorScheme.surfaceVariant,
                     border: Border.all(
-                      color: colorScheme.outlineVariant.withOpacity(0.2),
+                      color: kVfBorder.withOpacity(0.2),
                     ),
                   ),
                   child: Image.network(
@@ -540,10 +530,10 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: colorScheme.surface.withOpacity(0.95),
+        color: kVfBackground.withOpacity(0.95),
         border: Border(
           top: BorderSide(
-            color: colorScheme.outlineVariant.withOpacity(0.3),
+            color: kVfBorder.withOpacity(0.3),
           ),
         ),
       ),
@@ -557,7 +547,7 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(80, 56),
                   side: BorderSide(
-                      color: colorScheme.outlineVariant.withOpacity(0.5)),
+                      color: kVfBorder.withOpacity(0.5)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -577,8 +567,8 @@ class _MenuSelectionScreenState extends State<MenuSelectionScreen> {
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primaryFixedDim,
-                  foregroundColor: colorScheme.onPrimaryFixed,
+                  backgroundColor: kVfAccent,
+                  foregroundColor: Color(0xFF2C1810),
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

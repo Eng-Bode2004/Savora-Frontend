@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:savora_app/features/chef/auth/screens/sub_Categories.dart';
+import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 
 class SelectSpecializedCategories extends StatefulWidget {
   const SelectSpecializedCategories({super.key});
@@ -69,123 +69,93 @@ class _SelectSpecializedCategoriesState
     });
   }
 
-  void _handleContinue() {
-    if (!isContinueEnabled) return;
-
-    // التنقل إلى الصفحة التالية
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const NextStepScreen(),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: kVfBackground,
       body: SafeArea(
         child: Column(
           children: [
-            // Top App Bar
-            _buildTopAppBar(colorScheme),
-            // Main Content
+            _buildTopBar(),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 24,
+                  horizontal: 20,
+                  vertical: 8,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Section
-                    _buildHeader(colorScheme),
+                    const SizedBox(height: 8),
+                    _buildHeader(),
                     const SizedBox(height: 24),
-                    // Category Grid
-                    _buildCategoryGrid(colorScheme),
-                    // Bottom Spacer for FAB
+                    _buildCategoryGrid(),
                     const SizedBox(height: 120),
                   ],
                 ),
               ),
             ),
-            // Fixed Bottom Action Bar
-            _buildBottomActionBar(colorScheme),
+            _buildBottomActionBar(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTopAppBar(ColorScheme colorScheme) {
+  Widget _buildTopBar() {
     return Container(
-      height: 64,
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: colorScheme.surface.withOpacity(0.8),
+        color: kVfWhite,
         border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outlineVariant.withOpacity(0.3),
-          ),
+          bottom: BorderSide(color: kVfBorder.withValues(alpha: 0.6)),
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Brand Logo
-            Text(
-              'Savora Partner',
-              style: _getTextStyle('headline-lg').copyWith(
-                color: colorScheme.primary,
-              ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            color: kVfDarkText,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Choose Items',
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: kVfDarkText,
             ),
-            // Step Indicator
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(9999),
-              ),
-              child: Text(
-                'Step 1 of 3',
-                style: _getTextStyle('label-md').copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader(ColorScheme colorScheme) {
+  Widget _buildHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'What will you be cooking today?',
           style: _getTextStyle('display-lg').copyWith(
-            color: colorScheme.onSurface,
+            color: kVfDarkText,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           'Select your culinary expertise to see standardized recipes, packaging requirements, and suggested pricing for your region.',
           style: _getTextStyle('body-lg').copyWith(
-            color: colorScheme.onSurfaceVariant,
+            color: kVfMutedText,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCategoryGrid(ColorScheme colorScheme) {
+  Widget _buildCategoryGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth > 1000
@@ -212,7 +182,7 @@ class _SelectSpecializedCategoriesState
               category: category,
               isSelected: isSelected,
               onTap: () => _toggleCategory(category.id),
-              colorScheme: colorScheme,
+    
             );
           },
         );
@@ -224,7 +194,6 @@ class _SelectSpecializedCategoriesState
     required CategoryItem category,
     required bool isSelected,
     required VoidCallback onTap,
-    required ColorScheme colorScheme,
   }) {
     return Material(
       color: Colors.transparent,
@@ -235,17 +204,17 @@ class _SelectSpecializedCategoriesState
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
-            color: isSelected ? colorScheme.primaryFixed : colorScheme.surface,
+            color: isSelected ? kVfAccent.withValues(alpha: 0.12) : kVfBackground,
             border: Border.all(
               color:
-                  isSelected ? colorScheme.primary : colorScheme.outlineVariant,
+                  isSelected ? kVfAccent : kVfBorder,
               width: 2,
             ),
             borderRadius: BorderRadius.circular(12),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: colorScheme.primaryFixedDim.withOpacity(0.3),
+                      color: kVfAccent.withValues(alpha: 0.3) /* was primaryFixedDim */.withOpacity(0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                       spreadRadius: -10,
@@ -265,8 +234,8 @@ class _SelectSpecializedCategoriesState
                       ? Icons.check_circle
                       : Icons.radio_button_unchecked,
                   color: isSelected
-                      ? colorScheme.primary
-                      : colorScheme.outlineVariant,
+                      ? kVfAccent
+                      : kVfBorder,
                   size: 24,
                 ),
               ),
@@ -278,14 +247,14 @@ class _SelectSpecializedCategoriesState
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceVariant,
+                      color: kVfBorder,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       category.icon,
                       color: isSelected
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant,
+                          ? kVfAccent
+                          : kVfMutedText,
                       size: 36,
                     ),
                   ),
@@ -294,7 +263,7 @@ class _SelectSpecializedCategoriesState
                     category.name,
                     textAlign: TextAlign.center,
                     style: _getTextStyle('label-lg').copyWith(
-                      color: colorScheme.onSurface,
+                      color: kVfDarkText,
                     ),
                   )
                 ],
@@ -306,14 +275,14 @@ class _SelectSpecializedCategoriesState
     );
   }
 
-  Widget _buildBottomActionBar(ColorScheme colorScheme) {
+  Widget _buildBottomActionBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: colorScheme.surface.withOpacity(0.95),
+        color: kVfBackground.withOpacity(0.95),
         border: Border(
           top: BorderSide(
-            color: colorScheme.outlineVariant.withOpacity(0.2),
+            color: kVfBorder.withOpacity(0.2),
           ),
         ),
       ),
@@ -326,29 +295,25 @@ class _SelectSpecializedCategoriesState
               Text(
                 '${selectedCategories.length} categories selected',
                 style: _getTextStyle('label-md').copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                  color: kVfMutedText,
                 ),
               ),
             // Continue Button
             Expanded(
               child: ElevatedButton(
                 onPressed: () async {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SubCategories(),
-                    ),
-                  );
+                  if (!isContinueEnabled) return;
+                  Navigator.of(context).pop(true);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: isContinueEnabled
-                      ? colorScheme.primary
-                      : colorScheme.surfaceVariant,
+                      ? kVfAccent
+                      : kVfBorder,
                   foregroundColor: isContinueEnabled
-                      ? colorScheme.onPrimaryFixed
-                      : colorScheme.onSurfaceVariant,
-                  disabledBackgroundColor: colorScheme.surfaceVariant,
-                  disabledForegroundColor: colorScheme.onSurfaceVariant,
+                      ? kVfDarkText
+                      : kVfMutedText,
+                  disabledBackgroundColor: kVfBorder,
+                  disabledForegroundColor: kVfMutedText,
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -442,16 +407,12 @@ class NextStepScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: kVfBackground,
       body: SafeArea(
         child: Column(
           children: [
-            // Top App Bar مع زر رجوع
-            _buildNextTopAppBar(colorScheme, context),
-            // Main Content
+            _buildNextTopAppBar(context),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
@@ -461,32 +422,29 @@ class NextStepScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Section
-                    _buildNextHeader(colorScheme),
+                    _buildNextHeader(),
                     const SizedBox(height: 24),
-                    // محتوى الصفحة الثانية
-                    _buildNextContent(colorScheme),
+                    _buildNextContent(),
                     const SizedBox(height: 120),
                   ],
                 ),
               ),
             ),
-            // Bottom Action Bar
-            _buildNextBottomActionBar(colorScheme, context),
+            _buildNextBottomActionBar(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNextTopAppBar(ColorScheme colorScheme, BuildContext context) {
+  Widget _buildNextTopAppBar(BuildContext context) {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: colorScheme.surface.withOpacity(0.8),
+        color: kVfBackground.withOpacity(0.8),
         border: Border(
           bottom: BorderSide(
-            color: colorScheme.outlineVariant.withOpacity(0.3),
+            color: kVfBorder.withOpacity(0.3),
           ),
         ),
       ),
@@ -498,14 +456,14 @@ class NextStepScreen extends StatelessWidget {
             IconButton(
               onPressed: () => Navigator.pop(context),
               icon: const Icon(Icons.arrow_back),
-              color: colorScheme.onSurface,
+              color: kVfDarkText,
             ),
             const SizedBox(width: 8),
             // Brand Logo
             Text(
               'Savora Partner',
               style: _getTextStyle('headline-lg').copyWith(
-                color: colorScheme.primary,
+                color: kVfAccent,
               ),
             ),
             const Spacer(),
@@ -513,13 +471,13 @@ class NextStepScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant,
+                color: kVfBorder,
                 borderRadius: BorderRadius.circular(9999),
               ),
               child: Text(
                 'Step 2 of 3',
                 style: _getTextStyle('label-md').copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                  color: kVfMutedText,
                 ),
               ),
             ),
@@ -529,38 +487,38 @@ class NextStepScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNextHeader(ColorScheme colorScheme) {
+  Widget _buildNextHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Tell us about your kitchen',
           style: _getTextStyle('display-lg').copyWith(
-            color: colorScheme.onSurface,
+            color: kVfDarkText,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           'Provide details about your kitchen setup, equipment, and capacity to help us personalize your experience.',
           style: _getTextStyle('body-lg').copyWith(
-            color: colorScheme.onSurfaceVariant,
+            color: kVfMutedText,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildNextContent(ColorScheme colorScheme) {
+  Widget _buildNextContent() {
     return Column(
       children: [
         // بطاقة معلومات
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: colorScheme.primaryFixed.withOpacity(0.2),
+            color: kVfAccent.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: colorScheme.primary.withOpacity(0.3),
+              color: kVfAccent.withOpacity(0.3),
               width: 1,
             ),
           ),
@@ -568,7 +526,7 @@ class NextStepScreen extends StatelessWidget {
             children: [
               Icon(
                 Icons.info_outline,
-                color: colorScheme.primary,
+                color: kVfAccent,
                 size: 28,
               ),
               const SizedBox(width: 16),
@@ -576,7 +534,7 @@ class NextStepScreen extends StatelessWidget {
                 child: Text(
                   'Please fill in the required information to complete your profile setup.',
                   style: _getTextStyle('body-md').copyWith(
-                    color: colorScheme.onSurfaceVariant,
+                    color: kVfMutedText,
                   ),
                 ),
               ),
@@ -588,19 +546,19 @@ class NextStepScreen extends StatelessWidget {
         _buildFormField(
           label: 'Kitchen Name',
           hint: 'Enter your kitchen name',
-          colorScheme: colorScheme,
+
         ),
         const SizedBox(height: 16),
         _buildFormField(
           label: 'Kitchen Type',
           hint: 'e.g., Restaurant, Home Kitchen, Food Truck',
-          colorScheme: colorScheme,
+
         ),
         const SizedBox(height: 16),
         _buildFormField(
           label: 'Years of Experience',
           hint: 'Enter number of years',
-          colorScheme: colorScheme,
+
         ),
         const SizedBox(height: 24),
         // اختيارات إضافية
@@ -608,7 +566,7 @@ class NextStepScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             border: Border.all(
-              color: colorScheme.outlineVariant,
+              color: kVfBorder,
               width: 1,
             ),
             borderRadius: BorderRadius.circular(8),
@@ -619,7 +577,7 @@ class NextStepScreen extends StatelessWidget {
               Text(
                 'Do you have a commercial kitchen license?',
                 style: _getTextStyle('label-lg').copyWith(
-                  color: colorScheme.onSurface,
+                  color: kVfDarkText,
                 ),
               ),
               const SizedBox(height: 8),
@@ -629,14 +587,14 @@ class NextStepScreen extends StatelessWidget {
                     label: 'Yes',
                     value: 'yes',
                     groupValue: 'yes',
-                    colorScheme: colorScheme,
+          
                   ),
                   const SizedBox(width: 16),
                   _buildRadioOption(
                     label: 'No',
                     value: 'no',
                     groupValue: 'yes',
-                    colorScheme: colorScheme,
+          
                   ),
                 ],
               ),
@@ -650,7 +608,6 @@ class NextStepScreen extends StatelessWidget {
   Widget _buildFormField({
     required String label,
     required String hint,
-    required ColorScheme colorScheme,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -658,7 +615,7 @@ class NextStepScreen extends StatelessWidget {
         Text(
           label,
           style: _getTextStyle('label-lg').copyWith(
-            color: colorScheme.onSurface,
+            color: kVfDarkText,
           ),
         ),
         const SizedBox(height: 6),
@@ -666,7 +623,7 @@ class NextStepScreen extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: colorScheme.surfaceVariant,
+            fillColor: kVfBorder,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -678,13 +635,13 @@ class NextStepScreen extends StatelessWidget {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
-                color: colorScheme.primary,
+                color: kVfAccent,
                 width: 2,
               ),
             ),
           ),
           style: _getTextStyle('body-md').copyWith(
-            color: colorScheme.onSurface,
+            color: kVfDarkText,
           ),
         ),
       ],
@@ -695,36 +652,33 @@ class NextStepScreen extends StatelessWidget {
     required String label,
     required String value,
     required String groupValue,
-    required ColorScheme colorScheme,
   }) {
-    final isSelected = value == groupValue;
     return Row(
       children: [
         Radio<String>(
           value: value,
           groupValue: groupValue,
           onChanged: (val) {},
-          activeColor: colorScheme.primary,
+          activeColor: kVfAccent,
         ),
         Text(
           label,
           style: _getTextStyle('body-md').copyWith(
-            color: colorScheme.onSurface,
+            color: kVfDarkText,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildNextBottomActionBar(
-      ColorScheme colorScheme, BuildContext context) {
+  Widget _buildNextBottomActionBar(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: colorScheme.surface.withOpacity(0.95),
+        color: kVfBackground.withOpacity(0.95),
         border: Border(
           top: BorderSide(
-            color: colorScheme.outlineVariant.withOpacity(0.2),
+            color: kVfBorder.withOpacity(0.2),
           ),
         ),
       ),
@@ -736,7 +690,7 @@ class NextStepScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(100, 56),
-                side: BorderSide(color: colorScheme.outlineVariant),
+                side: BorderSide(color: kVfBorder),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -746,13 +700,13 @@ class NextStepScreen extends StatelessWidget {
                   Icon(
                     Icons.arrow_back,
                     size: 20,
-                    color: colorScheme.onSurfaceVariant,
+                    color: kVfMutedText,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Back',
                     style: _getTextStyle('label-lg').copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                      color: kVfMutedText,
                     ),
                   ),
                 ],
@@ -771,8 +725,8 @@ class NextStepScreen extends StatelessWidget {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimaryFixed,
+                  backgroundColor: kVfAccent,
+                  foregroundColor: kVfDarkText,
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

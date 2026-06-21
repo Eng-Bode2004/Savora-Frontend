@@ -1,114 +1,168 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:savora_app/core/routing/routes.dart';
-import 'package:savora_app/core/theme/app_colors.dart';
-import 'package:savora_app/core/theme/app_spacing.dart';
-import 'package:savora_app/core/theme/app_text_styles.dart';
+import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 import 'package:savora_app/features/chef/auth/screens/Select%20Specialized%20Categories.dart';
+import 'location_selection_screen.dart';
+import 'health_certificate_screen.dart';
+import 'id_photo_screen.dart';
+import 'payment_method_screen.dart';
+import 'waiting_approval_screen.dart';
 
-import '../../widgets/chef_ui_kit.dart';
-import '../models/verification_step.dart';
-import '../models/step_data.dart';
-
-/// Profile tab home: partner verification checklist + identity document
-/// upload.
 
 class PartnerVerificationScreen extends StatefulWidget {
   const PartnerVerificationScreen({super.key});
 
   @override
-  State<PartnerVerificationScreen> createState() => _VerificationScreenState();
+  State<PartnerVerificationScreen> createState() =>
+      _PartnerVerificationScreenState();
 }
 
-class _VerificationScreenState extends State<PartnerVerificationScreen> {
-  bool _isFileSelected = false;
-  String _fileName = '';
-
-  // Steps data
-  late final List<StepData> steps = [
-    StepData(
-        label: 'Orders',
-        icon: Icons.motorcycle,
-        isActive: false,
-        isCompleted: false,
-        isError: true),
-    StepData(
-        label: 'Location',
-        icon: Icons.map_outlined,
-        isActive: false,
-        isCompleted: false,
-        isError: true),
-    StepData(
-        label: 'Identity',
-        icon: Icons.badge_outlined,
-        isActive: false,
-        isCompleted: false,
-        isError: true),
-    StepData(
-        label: 'Health Cert',
-        icon: Icons.medical_information,
-        isActive: true,
-        isCompleted: false,
-        isError: false),
+class _PartnerVerificationScreenState
+    extends State<PartnerVerificationScreen> with TickerProviderStateMixin {
+  final List<_StepState> _steps = [
+    _StepState(label: 'Choose items Chief can make', icon: Icons.restaurant_menu),
+    _StepState(label: 'Choose address', icon: Icons.location_on),
+    _StepState(label: 'Upload Health certificate', icon: Icons.medical_services),
+    _StepState(label: 'Upload National ID', icon: Icons.badge),
+    _StepState(label: 'Upload Payment method', icon: Icons.payment),
+    _StepState(label: 'Waiting for Admin Approval', icon: Icons.hourglass_empty),
   ];
 
-  Future<void> _handleFileUpload() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        setState(() {
-          _isFileSelected = true;
-          _fileName = image.name;
-        });
+  int _currentStep = 0;
+
+  late final AnimationController _bounceCtrl;
+  late final Animation<double> _bounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _bounceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _bounce = Tween<double>(begin: 0, end: -8).animate(
+      CurvedAnimation(parent: _bounceCtrl, curve: Curves.easeInOutSine),
+    );
+  }
+
+  @override
+  void dispose() {
+    _bounceCtrl.dispose();
+    super.dispose();
+  }
+
+  void _goToStep(int index) {
+    if (index < 0 || index >= _steps.length) return;
+    if (index > 0 && !_steps[index - 1].completed) return;
+    setState(() => _currentStep = index);
+    _openStepScreen(index);
+  }
+
+  Future<void> _openStepScreen(int index) async {
+    switch (index) {
+      case 0:
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const SelectSpecializedCategories(),
+          ),
+        );
+        if (result == true && mounted) {
+          setState(() => _steps[0].completed = true);
+          _advanceIfReady();
+        }
+        break;
+      case 1:
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const LocationSelectionScreen(),
+          ),
+        );
+        if (result == true && mounted) {
+          setState(() => _steps[1].completed = true);
+          _advanceIfReady();
+        }
+        break;
+      case 2:
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const HealthCertificateScreen(),
+          ),
+        );
+        if (result == true && mounted) {
+          setState(() => _steps[2].completed = true);
+          _advanceIfReady();
+        }
+        break;
+      case 3:
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const IdPhotoScreen(),
+          ),
+        );
+        if (result == true && mounted) {
+          setState(() => _steps[3].completed = true);
+          _advanceIfReady();
+        }
+        break;
+      case 4:
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const PaymentMethodScreen(),
+          ),
+        );
+        if (result == true && mounted) {
+          setState(() => _steps[4].completed = true);
+          _advanceIfReady();
+        }
+        break;
+      case 5:
+        _steps[5].completed = true;
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Selected image: ${image.name}'),
-              backgroundColor: Colors.green,
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const WaitingApprovalScreen(),
             ),
           );
         }
-      }
-    } catch (e) {
-      debugPrint("Gallery error: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to open gallery: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+        break;
+    }
+  }
+
+  void _advanceIfReady() {
+    if (_currentStep < _steps.length - 1 &&
+        _steps[_currentStep].completed) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) {
+          setState(() => _currentStep = _currentStep + 1);
+        }
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: const Color(0xFFF8F6F2),
       body: SafeArea(
         child: Column(
           children: [
-            // Top Navigation Bar
-            _buildTopNavBar(context),
-            // Main Content
+            _buildTopBar(),
             Expanded(
-              child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    // Stepper Component
-                    _buildStepper(),
-                    const SizedBox(height: 24),
-                    // Main Content Section
-                    _buildMainContent(context),
-                  ],
-                ),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                children: [
+                  const SizedBox(height: 8),
+                  _buildHeader(),
+                  const SizedBox(height: 28),
+                  _buildStepList(),
+                  const SizedBox(height: 28),
+                  _buildContinueButton(),
+                ],
               ),
             ),
           ],
@@ -117,31 +171,31 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
     );
   }
 
-  Widget _buildTopNavBar(BuildContext context) {
+  Widget _buildTopBar() {
     return Container(
-      height: 64,
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+        color: Colors.white,
         border: Border(
-          bottom: BorderSide(
-            color:
-                Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
-          ),
+          bottom: BorderSide(color: const Color(0xFFE8E4DE).withValues(alpha: 0.6)),
         ),
       ),
       child: Row(
         children: [
-          const SizedBox(width: 8),
-          // Back Button
-          _buildIconButton(
-            icon: Icons.arrow_back,
-            onTap: () => Navigator.of(context).pop(),
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            color: const Color(0xFF1A1410),
+            onPressed: () => Navigator.of(context).pop(),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           Text(
-            'Onboardsing',
-            style: _getTextStyle('headline-md').copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
+            'Verification',
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1A1410),
             ),
           ),
         ],
@@ -149,481 +203,257 @@ class _VerificationScreenState extends State<PartnerVerificationScreen> {
     );
   }
 
-  Widget _buildIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(9999),
-        child: Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          child: Icon(icon, color: Theme.of(context).colorScheme.onSurface),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStepper() {
+  Widget _buildHeader() {
+    final completedCount = _steps.where((s) => s.completed).length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Stepper Nodes
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final totalWidth = constraints.maxWidth;
-            final nodeWidth = (totalWidth - 32) / steps.length;
-
-            return Stack(
-              children: [
-                // Background Line
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 20,
-                  child: Container(
-                    height: 2,
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                  ),
-                ),
-                // Progress Line (up to step 4)
-                Positioned(
-                  left: 0,
-                  top: 20,
-                  child: Container(
-                    width: totalWidth * 0.85,
-                    height: 2,
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                ),
-                // Nodes
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: steps.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final step = entry.value;
-
-                    return _buildStepNode(
-                      index: index,
-                      step: step,
-                      nodeWidth: nodeWidth,
-                    );
-                  }).toList(),
-                ),
-              ],
-            );
-          },
+        Text(
+          'Complete your profile',
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF1A1410),
+            height: 1.2,
+          ),
         ),
-        // Labels (visible on larger screens)
-        const SizedBox(height: 8),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // Show labels only on wider screens
-            if (constraints.maxWidth < 600) {
-              return const SizedBox.shrink();
-            }
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: steps.map((step) {
-                  final isActive = step.isActive;
-                  return SizedBox(
-                    width: 64,
-                    child: Text(
-                      step.label,
-                      style: _getTextStyle('label-md').copyWith(
-                        color: isActive
-                            ? Theme.of(context).colorScheme.secondary
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontWeight:
-                            isActive ? FontWeight.bold : FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }).toList(),
-              ),
-            );
-          },
+        const SizedBox(height: 6),
+        Text(
+          '$completedCount of ${_steps.length} steps completed',
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF6B6258),
+          ),
+        ),
+        const SizedBox(height: 14),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: completedCount / _steps.length,
+            minHeight: 5,
+            backgroundColor: const Color(0xFFE8E4DE),
+            valueColor: const AlwaysStoppedAnimation(kVfAccent),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildStepNode({
-    required int index,
-    required StepData step,
-    required double nodeWidth,
-  }) {
-    final isActive = step.isActive;
-    final isCompleted = step.isCompleted;
-    final isError = step.isError;
-    final color = Theme.of(context).colorScheme;
+  Widget _buildStepList() {
+    return Column(
+      children: List.generate(_steps.length, (i) {
+        final step = _steps[i];
+        final isCurrent = i == _currentStep;
+        final isCompleted = step.completed;
+        final isLocked = i > 0 && !_steps[i - 1].completed;
+        final canTap = !isLocked && !isCompleted;
 
-    Color nodeBgColor;
-    Color iconColor;
-    BorderSide borderSide;
-    IconData displayIcon;
+        return GestureDetector(
+          onTap: canTap ? () => _goToStep(i) : null,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: isCurrent
+                  ? kVfAccent.withValues(alpha: 0.07)
+                  : isCompleted
+                      ? const Color(0xFF4CAF50).withValues(alpha: 0.05)
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isCurrent
+                    ? kVfAccent
+                    : isCompleted
+                        ? const Color(0xFF4CAF50)
+                        : const Color(0xFFE8E4DE),
+                width: isCurrent || isCompleted ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                _buildStepIndicator(i, isCurrent, isCompleted, isLocked),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              step.label,
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontSize: 14,
+                                fontWeight:
+                                    isCurrent ? FontWeight.w700 : FontWeight.w600,
+                                color: isLocked
+                                    ? const Color(0xFFC9BFB0)
+                                    : const Color(0xFF1A1410),
+                              ),
+                            ),
+                          ),
+                          if (isCompleted)
+                            const Icon(Icons.check_circle_rounded,
+                                color: Color(0xFF4CAF50), size: 20),
+                          if (isCurrent && !isCompleted)
+                            _AnimatedHand(bounce: _bounce),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
 
-    if (isError) {
-      nodeBgColor = Colors.red;
-      iconColor = Colors.white;
-      borderSide = const BorderSide(color: Colors.red, width: 2);
-      displayIcon = Icons.close;
-    } else if (isCompleted) {
-      nodeBgColor = color.secondary;
-      iconColor = Colors.white;
-      borderSide = BorderSide(color: color.secondary, width: 2);
-      displayIcon = Icons.check;
-    } else {
-      nodeBgColor = color.surface;
-      iconColor = isActive ? color.secondary : color.onSurfaceVariant;
-      borderSide = BorderSide(
-        color: isActive ? color.secondary : color.outlineVariant,
-        width: 2,
+  Widget _buildStepIndicator(
+      int index, bool isCurrent, bool isCompleted, bool isLocked) {
+    if (isCompleted) {
+      return Container(
+        width: 34,
+        height: 34,
+        decoration: const BoxDecoration(
+          color: Color(0xFF4CAF50),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
       );
-      displayIcon = step.icon;
+    }
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: isCurrent ? kVfAccent : Colors.transparent,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isCurrent
+              ? kVfAccent
+              : isLocked
+                  ? const Color(0xFFE8E4DE)
+                  : const Color(0xFFC9BFB0),
+          width: 2,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          '${index + 1}',
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: isCurrent
+                ? Colors.white
+                : isLocked
+                    ? const Color(0xFFC9BFB0)
+                    : const Color(0xFF6B6258),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContinueButton() {
+    final current = _currentStep;
+    final allDone = _steps.every((s) => s.completed);
+
+    if (allDone) {
+      return SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const WaitingApprovalScreen(),
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF4CAF50),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            'All steps completed — View status',
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
     }
 
     return SizedBox(
-      width: nodeWidth,
-      child: Column(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: nodeBgColor,
-              border: Border.fromBorderSide(borderSide),
-              boxShadow: isActive
-                  ? [
-                      BoxShadow(
-                        color: color.secondary.withOpacity(0.1),
-                        blurRadius: 8,
-                        spreadRadius: 4,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Center(
-              child: Icon(
-                displayIcon,
-                color: iconColor,
-                size: 24,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainContent(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Title Section
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Health Certificate',
-                style: _getTextStyle('headline-lg').copyWith(
-                  color: color.onSurface,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Please upload a clear, legible photo or scan of your valid food handler\'s certificate or local health permit.',
-                style: _getTextStyle('body-md').copyWith(
-                  color: color.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Upload Dropzone
-        _buildUploadDropzone(context),
-        const SizedBox(height: 16),
-        // Primary Action Button
-        _buildSubmitButton(context),
-        const SizedBox(height: 24),
-        // Contextual Information Card
-        _buildInfoCard(context),
-      ],
-    );
-  }
-
-  Widget _buildUploadDropzone(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: _handleFileUpload,
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: _isFileSelected ? Colors.green : color.outlineVariant,
-            width: 2,
-            style: _isFileSelected ? BorderStyle.solid : BorderStyle.solid,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          color: _isFileSelected
-              ? Colors.green.withOpacity(0.05)
-              : color.surfaceVariant.withOpacity(0.5),
-        ),
-        child: Column(
-          children: [
-            // Decorative Icon
-            Container(
-              width: double.infinity,
-              height: 64,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Icon(
-                _isFileSelected
-                    ? Icons.description_outlined
-                    : Icons.upload_file,
-                color: _isFileSelected ? Colors.green : color.secondary,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _isFileSelected ? _fileName : 'Tap to upload document',
-              style: _getTextStyle('label-lg').copyWith(
-                color: _isFileSelected ? Colors.green : color.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _isFileSelected
-                  ? 'File ready to upload'
-                  : 'Supported formats: PDF, JPG, PNG\n(Max file size: 5MB)',
-              style: _getTextStyle('body-sm').copyWith(
-                color: color.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubmitButton(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
-
-    return Container(
       width: double.infinity,
-      height: 56,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: color.secondary,
-        boxShadow: [
-          BoxShadow(
-            color: color.secondary.withOpacity(0.2),
-            blurRadius: 8,
-            spreadRadius: 2,
+      height: 52,
+      child: ElevatedButton.icon(
+        onPressed: () => _goToStep(current),
+        icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+        label: Text(
+          _steps[current].completed
+              ? 'Next step'
+              : 'Continue — Step ${current + 1}',
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SelectSpecializedCategories(),
-              ),
-            );
-            if (result == true) {
-              setState(() {
-                // Step 0: Orders
-                steps[0].isCompleted = true;
-                steps[0].isError = false;
-
-                // Step 1: Location
-                steps[1].isCompleted = true;
-                steps[1].isError = false;
-
-                // Step 2: Identity
-                steps[2].isCompleted = true;
-                steps[2].isError = false;
-
-                // Step 3: Health Cert
-                steps[3].isCompleted = true;
-                steps[3].isError = false;
-              });
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('All verification steps completed!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            }
-          },
-          borderRadius: BorderRadius.circular(8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                _isFileSelected ? 'Submit Document' : 'Upload Certificate',
-                style: _getTextStyle('label-lg').copyWith(
-                  color: Colors.white,
-                ),
-              ),
-              if (_isFileSelected) ...[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ],
-            ],
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: kVfAccent,
+          foregroundColor: const Color(0xFF2C1810),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildInfoCard(BuildContext context) {
-    final color = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.outlineVariant.withOpacity(0.3),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.secondary.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.verified_user,
-              color: color.secondary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Why we need this',
-                  style: _getTextStyle('label-lg').copyWith(
-                    color: color.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'To maintain trust and ensure the highest food safety standards for our customers, all Savora partners must hold and present a valid local health certificate before they can start accepting and preparing orders on the platform.',
-                  style: _getTextStyle('body-sm').copyWith(
-                    color: color.onSurfaceVariant,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  TextStyle _getTextStyle(String style) {
-    switch (style) {
-      case 'headline-lg':
-        return const TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.w700,
-          height: 1.25,
-        );
-      case 'headline-md':
-        return const TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.w600,
-          height: 1.33,
-        );
-      case 'headline-sm':
-        return const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          height: 1.4,
-        );
-      case 'body-lg':
-        return const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w400,
-          height: 1.44,
-        );
-      case 'body-md':
-        return const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          height: 1.5,
-        );
-      case 'body-sm':
-        return const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-          height: 1.43,
-        );
-      case 'label-lg':
-        return const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          height: 1.43,
-          letterSpacing: 0.14,
-        );
-      case 'label-md':
-        return const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          height: 1.33,
-          letterSpacing: 0.24,
-        );
-      default:
-        return const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          height: 1.5,
-        );
-    }
   }
 }
 
+
+
+class _AnimatedHand extends StatelessWidget {
+  const _AnimatedHand({required this.bounce});
+
+  final Animation<double> bounce;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: bounce,
+      builder: (context, child) => Transform.translate(
+        offset: Offset(0, bounce.value),
+        child: child,
+      ),
+      child: const Padding(
+        padding: EdgeInsets.only(left: 4),
+        child: Icon(Icons.touch_app_rounded, color: kVfAccent, size: 22),
+      ),
+    );
+  }
+}
+
+class _StepState {
+  _StepState({required this.label, required this.icon});
+
+  final String label;
+  final IconData icon;
+  bool completed = false;
+}
