@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:savora_app/core/network/savora_api.dart';
+import 'package:savora_app/state/providers/auth_provider.dart';
 import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 import 'package:savora_app/features/chef/auth/screens/Select%20Specialized%20Categories.dart';
 import 'location_selection_screen.dart';
@@ -7,6 +9,13 @@ import 'id_photo_screen.dart';
 import 'payment_method_screen.dart';
 import 'waiting_approval_screen.dart';
 
+const List<String> _stepFields = [
+  'Items_Can_Make_Status',
+  'Address_Status',
+  'Health_Certificate_Status',
+  'National_ID_Status',
+  'Payment_Method_Status',
+];
 
 class PartnerVerificationScreen extends StatefulWidget {
   const PartnerVerificationScreen({super.key});
@@ -28,6 +37,7 @@ class _PartnerVerificationScreenState
   ];
 
   int _currentStep = 0;
+  bool _loadingStatus = true;
 
   late final AnimationController _bounceCtrl;
   late final Animation<double> _bounce;
@@ -42,12 +52,41 @@ class _PartnerVerificationScreenState
     _bounce = Tween<double>(begin: 0, end: -8).animate(
       CurvedAnimation(parent: _bounceCtrl, curve: Curves.easeInOutSine),
     );
+    _loadStepStatuses();
   }
 
   @override
   void dispose() {
     _bounceCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadStepStatuses() async {
+    final profileId = authState.profileId;
+    if (profileId == null) {
+      if (mounted) setState(() => _loadingStatus = false);
+      return;
+    }
+    try {
+      final data = await SavoraApi.getVerificationSteps(profileId);
+      final steps = data['steps'] as Map<String, dynamic>?;
+      if (steps == null) {
+        if (mounted) setState(() => _loadingStatus = false);
+        return;
+      }
+      for (int i = 0; i < _stepFields.length; i++) {
+        final status = steps[_stepFields[i]] as String?;
+        if (status == 'verified') {
+          _steps[i].completed = true;
+        }
+      }
+      final isVerified = steps['Is_Verified'] == true;
+      final allStepsDone = _steps.take(5).every((s) => s.completed);
+      _steps[5].completed = isVerified || allStepsDone;
+      if (mounted) setState(() => _loadingStatus = false);
+    } catch (_) {
+      if (mounted) setState(() => _loadingStatus = false);
+    }
   }
 
   void _goToStep(int index) {
@@ -153,17 +192,19 @@ class _PartnerVerificationScreenState
           children: [
             _buildTopBar(),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                children: [
-                  const SizedBox(height: 8),
-                  _buildHeader(),
-                  const SizedBox(height: 28),
-                  _buildStepList(),
-                  const SizedBox(height: 28),
-                  _buildContinueButton(),
-                ],
-              ),
+              child: _loadingStatus
+                  ? const Center(child: CircularProgressIndicator(color: kVfAccent))
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                      children: [
+                        const SizedBox(height: 8),
+                        _buildHeader(),
+                        const SizedBox(height: 28),
+                        _buildStepList(),
+                        const SizedBox(height: 28),
+                        _buildContinueButton(),
+                      ],
+                    ),
             ),
           ],
         ),

@@ -17,7 +17,9 @@ class SavoraApi {
   static const String roleBase    = 'https://savorarole-services-production.up.railway.app/api/v1/roles';
   static const String chiefBase   = 'https://savora-chiefprofileservices-production.up.railway.app/api/v2/chief-profile';
   static const String dishBase    = 'https://savoradish-services-production.up.railway.app/api/v1/dishes';
-  static const String prefChiefBase = 'https://savorapreferreddisheschief-services-production.up.railway.app/api/v1/preferred-dishes-chief';
+  static const String prefChiefBase = 'https://savoradishprefered-services-production.up.railway.app/api/v1/preferred-dishes-chief';
+  static const String categoryBase = 'https://savora-categoryservices-production.up.railway.app/api/v1/categories';
+  static const String subcategoryBase = 'https://savora-subcategoriesservices-production.up.railway.app/api/v1/subcategories';
 
   static const Duration _timeout = Duration(seconds: 15);
 
@@ -43,6 +45,9 @@ class SavoraApi {
 
   static Future<http.Response> _delete(String url, {Map<String, String>? headers}) =>
       http.delete(Uri.parse(url), headers: headers).timeout(_timeout);
+
+  static Future<http.Response> _patch(String url, {Map<String, String>? headers, Object? body}) =>
+      http.patch(Uri.parse(url), headers: headers, body: body).timeout(_timeout);
 
   // ── Auth ──────────────────────────────────────────────────────────────
 
@@ -264,6 +269,46 @@ class SavoraApi {
 
   static Future<Map<String, dynamic>> deleteDish(String id) async {
     final res = await _delete('$dishBase/$id', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Categories ───────────────────────────────────────────────────────—
+
+  static Future<Map<String, dynamic>> getCategoriesByLanguage(String lang) async {
+    final res = await _get('$categoryBase/language/$lang', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Subcategories ────────────────────────────────────────────────────—
+
+  static Future<Map<String, dynamic>> getSubcategoriesByCategory(String categoryId) async {
+    final res = await _get('$subcategoryBase/by-category/$categoryId', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Chief Profile Step Verification ───────────────────────────────────—
+
+  static Future<Map<String, dynamic>> getVerificationSteps(String profileId) async {
+    final res = await _get('$chiefBase/$profileId/verification-steps', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> verifyStep({
+    required String profileId,
+    required String step,
+    required String status,
+  }) async {
+    final res = await _patch('$chiefBase/$profileId/verify-step', headers: _authHeaders, body: jsonEncode({
+      'step': step, 'status': status,
+    }));
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
     throw Exception(_extractError(data));
