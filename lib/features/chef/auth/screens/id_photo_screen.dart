@@ -63,7 +63,8 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${isFront ? "Front" : "Back"} ID selected: ${image.name}'),
+              content: Text(
+                  '${isFront ? "Front" : "Back"} ID selected: ${image.name}'),
               backgroundColor: kVfGreen,
             ),
           );
@@ -89,18 +90,17 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Navigation Bar
-            _buildTopNavBar(context),
             // Main Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 8),
-                    // Stepper Component
-                    _buildStepper(),
+                    // Top Navigation Bar
+                    _buildTopNavBar(context),
                     const SizedBox(height: 24),
                     // Main Content Section
                     _buildMainContent(context),
@@ -142,92 +142,6 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStepper() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Stepper Nodes
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final totalWidth = constraints.maxWidth;
-            final nodeWidth = (totalWidth - 32) / steps.length;
-
-            return Stack(
-              children: [
-                // Background Line
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: 20,
-                  child: Container(
-                    height: 2,
-                    color: kVfBorder,
-                  ),
-                ),
-                // Progress Line (up to step 3)
-                Positioned(
-                  left: 0,
-                  top: 20,
-                  child: Container(
-                    width: totalWidth * 0.65,
-                    height: 2,
-                    color: kVfAccent,
-                  ),
-                ),
-                // Nodes
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: steps.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final step = entry.value;
-
-                    return _buildStepNode(
-                      index: index,
-                      step: step,
-                      nodeWidth: nodeWidth,
-                    );
-                  }).toList(),
-                ),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        // Labels
-        LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth < 600) {
-              return const SizedBox.shrink();
-            }
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: steps.map((step) {
-                  final isActive = step.isActive;
-                  return SizedBox(
-                    width: 64,
-                    child: Text(
-                      step.label,
-                      style: _getTextStyle('label-md').copyWith(
-                        color: isActive
-                            ? kVfAccent
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }).toList(),
-              ),
-            );
-          },
-        ),
-      ],
     );
   }
 
@@ -390,7 +304,9 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
                     ],
                   ),
                   child: Icon(
-                    isSelected ? Icons.check_circle_outline : Icons.add_a_photo_outlined,
+                    isSelected
+                        ? Icons.check_circle_outline
+                        : Icons.add_a_photo_outlined,
                     color: isSelected ? kVfGreen : kVfAccent,
                     size: 28,
                   ),
@@ -406,7 +322,9 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isSelected ? 'Ready to upload' : 'Ensure all details on the card are clearly readable',
+                  isSelected
+                      ? 'Ready to upload'
+                      : 'Ensure all details on the card are clearly readable',
                   style: _getTextStyle('body-sm').copyWith(
                     color: color.onSurfaceVariant,
                   ),
@@ -444,7 +362,8 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
         child: InkWell(
           onTap: isEnabled
               ? () {
-                  Navigator.of(context).pushReplacementNamed(Routes.chefLocationSelection);
+                  Navigator.of(context)
+                      .pushReplacementNamed(Routes.chefLocationSelection);
                 }
               : null,
           borderRadius: BorderRadius.circular(8),

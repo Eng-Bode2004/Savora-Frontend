@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 
 class HealthCertificateScreen extends StatefulWidget {
@@ -11,8 +12,38 @@ class HealthCertificateScreen extends StatefulWidget {
 
 class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
   bool _fileSelected = false;
+  String? _fileName;
 
-  void _browseFiles() => setState(() => _fileSelected = true);
+  Future<void> _browseFiles() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        setState(() {
+          _fileSelected = true;
+          _fileName = image.name;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Certificate selected: ${image.name}'),
+              backgroundColor: kVfGreen,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Picker error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open gallery: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   void _upload() {
     if (!_fileSelected) {
@@ -196,7 +227,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
             const SizedBox(height: 16),
             Text(
               _fileSelected
-                  ? 'certificate_scan.pdf selected'
+                  ? (_fileName ?? 'Certificate selected')
                   : 'Tap to upload certificate',
               style: TextStyle(
                 fontFamily: 'DM Sans',

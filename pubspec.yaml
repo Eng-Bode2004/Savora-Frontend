@@ -12,9 +12,11 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  flutter_map: ^8.3.0
   google_fonts: ^6.2.1
   http: ^1.2.0
   image_picker: ^1.2.1
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

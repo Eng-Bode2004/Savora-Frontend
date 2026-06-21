@@ -13,7 +13,6 @@ import 'package:savora_app/features/chef/menu_submission/screens/culinary_specia
 import 'package:savora_app/features/customer/auth/screens/role_selection_screen.dart';
 import 'package:savora_app/features/chef/auth/screens/daily_orders_screen.dart';
 import 'package:savora_app/features/chef/auth/screens/id_photo_screen.dart';
-import 'package:savora_app/features/chef/auth/screens/location_selection_screen.dart';
 import 'package:savora_app/features/chef/auth/screens/waiting_approval_screen.dart';
 
 class AppRouter {
@@ -43,7 +42,7 @@ class AppRouter {
         );
       case Routes.chefLocationSelection:
         return MaterialPageRoute(
-          builder: (_) => const LocationSelectionScreen(),
+          builder: (_) => const LocationSetupScreen(),
           settings: settings,
         );
       case Routes.chefWaitingApproval:

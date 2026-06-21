@@ -3,7 +3,7 @@ import 'package:savora_app/core/network/savora_api.dart';
 import 'package:savora_app/state/providers/auth_provider.dart';
 import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 import 'package:savora_app/features/chef/auth/screens/Select%20Specialized%20Categories.dart';
-import 'location_selection_screen.dart';
+import 'location_setup_screen.dart';
 import 'health_certificate_screen.dart';
 import 'id_photo_screen.dart';
 import 'payment_method_screen.dart';
@@ -114,10 +114,10 @@ class _PartnerVerificationScreenState
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const LocationSelectionScreen(),
+            builder: (_) => const LocationSetupScreen(),
           ),
         );
-        if (result == true && mounted) {
+        if (result != null && mounted) {
           setState(() => _steps[1].completed = true);
           _advanceIfReady();
         }
