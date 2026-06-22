@@ -7,6 +7,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/network/savora_api.dart';
 import '../../../../state/providers/auth_provider.dart';
 import '../../../../core/routing/routes.dart';
+import 'login_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -149,9 +150,23 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
         if (profileId != null) {
           await SavoraApi.assignProfile(userId: userId, profileId: profileId);
         }
+      } else if (spec.roleKey == 'Customer') {
+        try {
+          final profileResult = await SavoraApi.createCustomerProfile({
+            'auth_id': userId,
+            'name': authState.name ?? '',
+          });
+          final profile = profileResult['response'] as Map<String, dynamic>?;
+          final profileId = profile?['_id'] as String?;
+          if (profileId != null) {
+            await SavoraApi.assignProfile(userId: userId, profileId: profileId);
+          }
+        } catch (_) {
+          // profile may already exist from backend auto-creation
+        }
       }
 
-      _showSuccessDialog(spec.fallbackTitle);
+      _showSuccessDialog(spec);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -233,10 +248,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       return;
     }
 
-    _showSuccessDialog(spec.fallbackTitle);
+    _showSuccessDialog(spec);
   }
 
-  void _showSuccessDialog(String roleTitle) {
+  void _showSuccessDialog(_RoleSpec spec) {
     HapticFeedback.heavyImpact();
     showGeneralDialog(
       context: context,
@@ -251,7 +266,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
           opacity: anim.value.clamp(0.0, 1.0),
           child: Transform.scale(
             scale: 0.8 + 0.2 * curved.value.clamp(0.0, 1.0),
-            child: _RoleSuccessDialog(role: roleTitle, isDark: _isDarkMode),
+            child: _RoleSuccessDialog(role: spec.fallbackTitle, isDark: _isDarkMode),
           ),
         );
       },
@@ -260,7 +275,14 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     Future.delayed(const Duration(milliseconds: 1800), () {
       if (!mounted) return;
       Navigator.of(context).pop(); // dismiss dialog
-      Navigator.of(context).pushReplacementNamed(Routes.chefCulinarySpecialty);
+      if (spec.roleKey == 'Chef') {
+        Navigator.of(context).pushReplacementNamed(Routes.chefCulinarySpecialty);
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
     });
   }
 

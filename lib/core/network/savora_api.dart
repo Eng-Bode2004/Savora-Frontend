@@ -7,7 +7,7 @@ class SavoraApi {
   // Set to your local IP when testing OTP locally (e.g. 'http://192.168.1.100:5003')
   // Set to null to use Railway production
   // static const String? localOtpUrl = null;
-  static const String? localOtpUrl = 'http://192.168.1.6:5003';
+  static const String? localOtpUrl = 'http://192.168.1.5:5003';
 
   static String get otpBase => localOtpUrl != null
       ? '$localOtpUrl/api/v1/otp'
@@ -20,6 +20,9 @@ class SavoraApi {
   static const String prefChiefBase = 'https://savoradishprefered-services-production.up.railway.app/api/v1/preferred-dishes-chief';
   static const String categoryBase = 'https://savora-categoryservices-production.up.railway.app/api/v1/categories';
   static const String subcategoryBase = 'https://savora-subcategoriesservices-production.up.railway.app/api/v1/subcategories';
+  static const String customerBase = 'https://savoracustomerprofile-services-production.up.railway.app/api/v1/customer-profile';
+  static const String paymentProviderBase = 'https://savorapaymentprovider-services-production.up.railway.app/api/v1/payment-provider';
+  static const String addressBase = 'https://savoraaddress-services-production.up.railway.app/api/v1/address';
 
   static const Duration _timeout = Duration(seconds: 15);
 
@@ -215,12 +218,76 @@ class SavoraApi {
     throw Exception(_extractError(data));
   }
 
+  static Future<Map<String, dynamic>> createCustomerProfile(Map<String, dynamic> data) async {
+    final res = await _post(customerBase, headers: _headers, body: jsonEncode(data));
+
+    final result = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 201) return result;
+    throw Exception(_extractError(result));
+  }
+
   static Future<Map<String, dynamic>> getChiefProfile(String id) async {
     final res = await _get('$chiefBase/$id', headers: _authHeaders);
 
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
     throw Exception(_extractError(data));
+  }
+
+  // ── Customer Profile ─────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getCustomerProfileByAuthId(String authId) async {
+    final res = await _get('$customerBase/auth/$authId', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> updateCustomerVerificationStep({
+    required String profileId,
+    required String step,
+  }) async {
+    final res = await _patch('$customerBase/$profileId/verify-step', headers: _authHeaders, body: jsonEncode({'step': step}));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> updateCustomerProfile({
+    required String profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    final res = await _put('$customerBase/$profileId', headers: _authHeaders, body: jsonEncode(data));
+    final result = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return result;
+    throw Exception(_extractError(result));
+  }
+
+  // ── Payment Providers ────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getActivePaymentProviders() async {
+    final res = await _get('$paymentProviderBase/active', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) {
+      final list = data['data'];
+      if (list is List) return list.cast<Map<String, dynamic>>();
+      return [];
+    }
+    throw Exception(_extractError(data));
+  }
+
+  // ── Address ──────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> createAddress(Map<String, dynamic> addressData) async {
+    final res = await _post(addressBase, headers: _headers, body: jsonEncode(addressData));
+    if (res.statusCode == 201) return jsonDecode(res.body) as Map<String, dynamic>;
+    final raw = res.body;
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      throw Exception(_extractError(data));
+    } catch (_) {
+      throw Exception('Address service returned ${res.statusCode}: ${raw.length > 200 ? raw.substring(0, 200) : raw}');
+    }
   }
 
   // ── Dishes ───────────────────────────────────────────────────────────—

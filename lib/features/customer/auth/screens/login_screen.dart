@@ -237,11 +237,22 @@ class _LoginScreenState extends State<LoginScreen>
                 }
               }
             }
+          } else if (roleKey == 'Customer') {
+            try {
+              final data = await SavoraApi.getCustomerProfileByAuthId(userId);
+              if (mounted) {
+                final profile = data['response'] as Map<String, dynamic>?;
+                if (profile != null) {
+                  authState.setProfileData(profile);
+                  authState.setProfileId(profile['_id'] as String? ?? profileId);
+                  final pName = profile['name'] as String?;
+                  if (pName != null && pName.trim().isNotEmpty) {
+                    authState.setName(pName);
+                  }
+                }
+              }
+            } catch (_) {}
           }
-          // Future: Customer profile
-          // else if (englishName == 'Customer') { ... }
-          // Future: Delivery profile
-          // else if (englishName == 'Delivery') { ... }
         } catch (_) {
           // Profile fetch failed — continue with login anyway
         }

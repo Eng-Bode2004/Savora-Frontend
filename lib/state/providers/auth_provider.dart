@@ -18,7 +18,12 @@ class AuthState extends ChangeNotifier {
   String? get profileId => _profileId;
   Map<String, dynamic>? get profileData => _profileData;
   bool get isLoggedIn => _isLoggedIn;
-  bool get isVerified => _roleKey == 'Chef' ? (_profileData?['Is_Verified'] == true) : true;
+  bool get isVerified {
+    if (_roleKey == null) return false;
+    if (_roleKey == 'Chef') return _profileData?['Is_Verified'] == true;
+    if (_roleKey == 'Customer') return _profileData?['Is_Verified'] == true;
+    return true;
+  }
 
   void setUserId(String id) { _userId = id; notifyListeners(); }
   void setEmail(String e) { _email = e; notifyListeners(); }

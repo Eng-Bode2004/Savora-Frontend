@@ -1,12 +1,15 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:savora_app/core/network/savora_api.dart';
+import 'package:savora_app/state/providers/auth_provider.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../notifications/screens/notifications_screen.dart';
 import '../../planner/screens/group_meal_planner_screen.dart';
 import '../../menu/screens/dish_detail_screen.dart';
+import '../../auth/screens/customer_verification_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -25,6 +28,43 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   int _categoryIndex = 0;
 
   bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool _isVerified = authState.profileData?['Is_Verified'] == true;
+  bool _loadingProfile = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadProfileIfNeeded();
+  }
+
+  Future<void> _loadProfileIfNeeded() async {
+    if (_loadingProfile || _isVerified) return;
+    final userId = authState.userId;
+    final profileId = authState.profileId;
+    if (userId == null || profileId == null) return;
+    setState(() => _loadingProfile = true);
+    try {
+      final data = await SavoraApi.getCustomerProfileByAuthId(userId);
+      final profile = data['response'] as Map<String, dynamic>?;
+      if (profile != null) {
+        authState.setProfileData(profile);
+        setState(() => _isVerified = profile['Is_Verified'] == true);
+      }
+    } catch (_) {}
+    setState(() => _loadingProfile = false);
+  }
+
+  Future<void> _openVerification() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CustomerVerificationScreen(),
+      ),
+    );
+    if (result == true) {
+      _loadProfileIfNeeded();
+    }
+  }
 
   // ── data ──
   static const List<_Category> _categories = [
@@ -121,7 +161,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                                 _reveal(0.0, 0.25, _buildTopBar()),
                                 const SizedBox(height: 18),
                                 _reveal(0.05, 0.35, _buildSearchBar()),
-                                const SizedBox(height: 24),
+                                if (!_isVerified) ...[
+                                  const SizedBox(height: 14),
+                                  _reveal(0.07, 0.37, _buildVerificationBanner()),
+                                  const SizedBox(height: 14),
+                                ] else
+                                  const SizedBox(height: 24),
                                 _reveal(0.10, 0.40,
                                     _buildSectionHeader('Categories', 'View all')),
                                 const SizedBox(height: 14),
@@ -274,6 +319,80 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  // ════════ VERIFICATION BANNER ════════
+  Widget _buildVerificationBanner() {
+    return GestureDetector(
+      onTap: _openVerification,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              _kAccent.withValues(alpha: 0.15),
+              _kAccent.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _kAccent.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: _kAccent.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.verified_outlined,
+                  color: _kAccent, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Complete your profile',
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _isDarkMode
+                          ? AppColors.cream
+                          : const Color(0xFF2C1810),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Add payment, address & food preferences',
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 12,
+                      color: _subTextColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: _kAccent,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_forward_rounded,
+                  color: Color(0xFF2C1810), size: 18),
+            ),
+          ],
+        ),
       ),
     );
   }
