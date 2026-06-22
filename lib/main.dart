@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:savora_app/features/chef/shell/chef_shell.dart';
 import 'package:savora_app/features/customer/auth/screens/splash_screen.dart';
+
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_notifier.dart';
 import 'core/localization/app_localizations.dart';
@@ -60,7 +60,7 @@ class _SavoraAppState extends State<SavoraApp> {
       ],
       home: const SplashScreen(),
 //ChefShell
-
+//ProviderScope(child: DriverDashboardScreen()),
       onGenerateRoute: AppRouter.onGenerateRoute,
     );
   }

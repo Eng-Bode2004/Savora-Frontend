@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../state/cart_state.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -30,13 +31,13 @@ class _PersonalizedFeastScreenState extends State<PersonalizedFeastScreen>
 
   final List<_Dish> _feast = [
     _Dish('Mix Grill Platter', 'Kebab, Kofta, and Shish Tawook with garlic dip.',
-        'Large Plate', const Color(0xFF7A2E1E), '🍢'),
+        'Large Plate', const Color(0xFF7A2E1E), '🍢', 650),
     _Dish('Egyptian Fattah', 'Slow-cooked beef with garlic-vinegar rice and crisp bread.',
-        'Family Size', const Color(0xFF8B3A1E), '🍛'),
+        'Family Size', const Color(0xFF8B3A1E), '🍛', 490),
     _Dish('Assorted Mahshi', 'Vine leaves, zucchini, and bell peppers stuffed with herb rice.',
-        '24 Pieces', const Color(0xFF3E6B4A), '🫑'),
+        '24 Pieces', const Color(0xFF3E6B4A), '🫑', 420),
     _Dish('Royal Om Ali', 'Egyptian bread pudding with cream, nuts, and cinnamon.',
-        'Shareable Bowl', const Color(0xFF9A5B2A), '🍮'),
+        'Shareable Bowl', const Color(0xFF9A5B2A), '🍮', 280),
   ];
 
   @override
@@ -469,7 +470,34 @@ class _PersonalizedFeastScreenState extends State<PersonalizedFeastScreen>
             ),
             const SizedBox(height: 14),
             GestureDetector(
-              onTap: () => HapticFeedback.mediumImpact(),
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                for (final d in _feast) {
+                  cartState.addItem(
+                    CartItem(
+                      name: d.name,
+                      price: d.price,
+                      qty: 1,
+                      tone: d.tone,
+                      emoji: d.emoji,
+                    ),
+                  );
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Added entire feast to cart!',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    backgroundColor: _kAccentDark,
+                    behavior: SnackBarBehavior.floating,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -517,7 +545,8 @@ class _PersonalizedFeastScreenState extends State<PersonalizedFeastScreen>
 }
 
 class _Dish {
-  const _Dish(this.name, this.desc, this.serving, this.tone, this.emoji);
+  const _Dish(this.name, this.desc, this.serving, this.tone, this.emoji, this.price);
   final String name, desc, serving, emoji;
   final Color tone;
+  final int price;
 }

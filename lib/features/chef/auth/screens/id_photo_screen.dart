@@ -168,7 +168,7 @@ class _IdPhotoScreenState extends State<IdPhotoScreen> {
     } else if (isCompleted) {
       nodeBgColor = kVfAccent;
       iconColor = Colors.white;
-      borderSide = BorderSide(color: kVfAccent, width: 2);
+      borderSide = const BorderSide(color: kVfAccent, width: 2);
       displayIcon = Icons.check;
     } else {
       nodeBgColor = kVfBackground;

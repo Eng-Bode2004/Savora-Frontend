@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../state/cart_state.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -585,7 +586,54 @@ class _BuildYourOwnScreenState extends State<BuildYourOwnScreen>
             ),
             const Spacer(),
             GestureDetector(
-              onTap: () => HapticFeedback.mediumImpact(),
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                // Add all cart items to global cartState
+                for (final entry in _cart.entries) {
+                  final name = entry.key;
+                  final qty = entry.value;
+                  if (qty <= 0) continue;
+                  
+                  // Find the dish template
+                  _Dish? foundDish;
+                  for (final list in _dishesByCategory.values) {
+                    for (final d in list) {
+                      if (d.name == name) {
+                        foundDish = d;
+                        break;
+                      }
+                    }
+                    if (foundDish != null) break;
+                  }
+                  
+                  if (foundDish != null) {
+                    cartState.addItem(
+                      CartItem(
+                        name: foundDish.name,
+                        price: foundDish.price.round(),
+                        qty: qty,
+                        tone: foundDish.tone,
+                        emoji: foundDish.emoji,
+                      ),
+                    );
+                  }
+                }
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Items added to cart!',
+                      style: TextStyle(
+                        fontFamily: 'DM Sans',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    backgroundColor: _kAccentDark,
+                    behavior: SnackBarBehavior.floating,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(

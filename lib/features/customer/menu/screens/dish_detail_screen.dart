@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../state/cart_state.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -545,7 +546,38 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       child: SafeArea(
         top: false,
         child: GestureDetector(
-          onTap: () => HapticFeedback.mediumImpact(),
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            final addOnSum = _addOns
+                .where((a) => a.selected)
+                .fold(0, (sum, a) => sum + a.price);
+            final itemPrice = widget.basePrice + addOnSum;
+
+            cartState.addItem(
+              CartItem(
+                name: widget.name,
+                price: itemPrice,
+                qty: _quantity,
+                tone: widget.tone,
+                emoji: widget.emoji,
+              ),
+            );
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '${widget.name} added to cart!',
+                  style: const TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                backgroundColor: _kAccentDark,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 16),

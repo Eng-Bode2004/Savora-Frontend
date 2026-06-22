@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../state/cart_state.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -24,12 +25,6 @@ class _CartScreenState extends State<CartScreen>
 
   bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
 
-  final List<_CartItem> _items = [
-    _CartItem('Royal Lamb Fattah', 245, 1, const Color(0xFF8B3A1E), '🍛'),
-    _CartItem('Cairo Grills Platter', 320, 1, const Color(0xFF7A2E1E), '🍢'),
-    _CartItem("Grandma's Om Ali", 45, 1, const Color(0xFF9A5B2A), '🍮'),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -37,12 +32,21 @@ class _CartScreenState extends State<CartScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     )..forward();
+    
+    cartState.addListener(_onCartStateChanged);
   }
 
   @override
   void dispose() {
+    cartState.removeListener(_onCartStateChanged);
     _entrance.dispose();
     super.dispose();
+  }
+
+  void _onCartStateChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   double _t(double start, double end) {
@@ -61,15 +65,12 @@ class _CartScreenState extends State<CartScreen>
   }
 
   int get _subtotal =>
-      _items.fold(0, (sum, item) => sum + item.price * item.qty);
-  int get _total => _subtotal + (_items.isEmpty ? 0 : _deliveryFee);
+      cartState.items.fold(0, (sum, item) => sum + item.price * item.qty);
+  int get _total => _subtotal + (cartState.items.isEmpty ? 0 : _deliveryFee);
 
-  void _changeQty(_CartItem item, int delta) {
+  void _changeQty(CartItem item, int delta) {
     HapticFeedback.selectionClick();
-    setState(() {
-      item.qty += delta;
-      if (item.qty <= 0) _items.remove(item);
-    });
+    cartState.changeQty(item.name, delta);
   }
 
   Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
@@ -101,6 +102,7 @@ class _CartScreenState extends State<CartScreen>
                 child: AnimatedBuilder(
                   animation: _entrance,
                   builder: (context, _) {
+                    final itemsList = cartState.items;
                     return Column(
                       children: [
                         Padding(
@@ -108,7 +110,7 @@ class _CartScreenState extends State<CartScreen>
                           child: _reveal(0.0, 0.25, _buildTopBar()),
                         ),
                         Expanded(
-                          child: _items.isEmpty
+                          child: itemsList.isEmpty
                               ? _buildEmpty()
                               : SingleChildScrollView(
                                   physics: const BouncingScrollPhysics(),
@@ -117,11 +119,11 @@ class _CartScreenState extends State<CartScreen>
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        for (int i = 0; i < _items.length; i++) ...[
+                                        for (int i = 0; i < itemsList.length; i++) ...[
                                           _reveal(
                                             0.08 + i * 0.05,
                                             0.45 + i * 0.05,
-                                            _buildCartItem(_items[i]),
+                                            _buildCartItem(itemsList[i]),
                                           ),
                                           const SizedBox(height: 12),
                                         ],
@@ -134,7 +136,7 @@ class _CartScreenState extends State<CartScreen>
                                   ),
                                 ),
                         ),
-                        if (_items.isNotEmpty)
+                        if (itemsList.isNotEmpty)
                           _reveal(0.55, 1.0, _buildCheckoutBar()),
                       ],
                     );
@@ -178,9 +180,9 @@ class _CartScreenState extends State<CartScreen>
           ),
         ),
         const Spacer(),
-        if (_items.isNotEmpty)
+        if (cartState.items.isNotEmpty)
           Text(
-            '${_items.length} items',
+            '${cartState.items.length} items',
             style: TextStyle(
               fontFamily: 'DM Sans',
               fontSize: 13,
@@ -191,7 +193,7 @@ class _CartScreenState extends State<CartScreen>
     );
   }
 
-  Widget _buildCartItem(_CartItem item) {
+  Widget _buildCartItem(CartItem item) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -266,7 +268,7 @@ class _CartScreenState extends State<CartScreen>
     );
   }
 
-  Widget _buildStepper(_CartItem item) {
+  Widget _buildStepper(CartItem item) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -557,13 +559,4 @@ class _CartScreenState extends State<CartScreen>
       ),
     );
   }
-}
-
-class _CartItem {
-  _CartItem(this.name, this.price, this.qty, this.tone, this.emoji);
-  final String name;
-  final int price;
-  int qty;
-  final Color tone;
-  final String emoji;
 }
