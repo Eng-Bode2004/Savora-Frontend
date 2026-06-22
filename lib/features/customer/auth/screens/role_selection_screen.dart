@@ -149,6 +149,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
         final profileId = profile?['_id'] as String?;
         if (profileId != null) {
           await SavoraApi.assignProfile(userId: userId, profileId: profileId);
+          authState.setProfileId(profileId);
+          if (profile != null) authState.setProfileData(profile);
         }
       } else if (spec.roleKey == 'Customer') {
         try {
@@ -275,14 +277,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     Future.delayed(const Duration(milliseconds: 1800), () {
       if (!mounted) return;
       Navigator.of(context).pop(); // dismiss dialog
-      if (spec.roleKey == 'Chef') {
-        Navigator.of(context).pushReplacementNamed(Routes.chefCulinarySpecialty);
-      } else {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
     });
   }
 

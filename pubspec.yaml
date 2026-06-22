@@ -17,7 +17,7 @@ dependencies:
   http: ^1.2.0
   image_picker: ^1.2.1
   latlong2: ^0.9.1
-  shared_preferences: ^2.5.5
+  shared_preferences: ^2.5.3
   flutter_riverpod: ^2.5.1
   go_router: ^14.2.0
 
@@ -36,3 +36,8 @@ flutter:
     - lib/core/localization/es.json
     - lib/core/localization/fr.json
     - lib/core/localization/zh.json
+
+  fonts:
+    - family: DM Sans
+      fonts:
+        - asset: assets/fonts/DMSans-Variable.ttf

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:savora_app/core/network/savora_api.dart';
 import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 
 class HealthCertificateScreen extends StatefulWidget {
-  const HealthCertificateScreen({super.key});
+  final String profileId;
+  const HealthCertificateScreen({super.key, required this.profileId});
 
   @override
   State<HealthCertificateScreen> createState() =>
@@ -13,6 +15,8 @@ class HealthCertificateScreen extends StatefulWidget {
 class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
   bool _fileSelected = false;
   String? _fileName;
+  XFile? _pickedFile;
+  bool _uploading = false;
 
   Future<void> _browseFiles() async {
     try {
@@ -22,6 +26,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
         setState(() {
           _fileSelected = true;
           _fileName = image.name;
+          _pickedFile = image;
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -45,14 +50,52 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
     }
   }
 
-  void _upload() {
-    if (!_fileSelected) {
+  Future<void> _upload() async {
+    if (!_fileSelected || _pickedFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Select a certificate file first.')),
       );
       return;
     }
-    Navigator.of(context).pop(true);
+    setState(() => _uploading = true);
+    try {
+      final bytes = await _pickedFile!.readAsBytes();
+      final uploadRes = await SavoraApi.uploadHealthCertificateImage(bytes, _fileName ?? 'certificate.jpg');
+      final imageUrl = uploadRes['data']?['URL'] as String?;
+      if (imageUrl == null) throw Exception('No URL returned from upload');
+
+      await SavoraApi.assignHealthCertificateUrl(
+        profileId: widget.profileId,
+        certificateUrl: imageUrl,
+      );
+
+      await SavoraApi.verifyStep(
+        profileId: widget.profileId,
+        step: 'Health_Certificate_Status',
+        status: 'verified',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Health certificate uploaded successfully'),
+            backgroundColor: kVfGreen,
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      debugPrint("Upload error: $e");
+      if (mounted) {
+        setState(() => _uploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -274,7 +317,7 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: _upload,
+        onPressed: _uploading ? null : _upload,
         style: ElevatedButton.styleFrom(
           backgroundColor: kVfAccent,
           foregroundColor: const Color(0xFF2C1810),
@@ -283,14 +326,19 @@ class _HealthCertificateScreenState extends State<HealthCertificateScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: Text(
-          'Upload Certificate',
-          style: TextStyle(
-            fontFamily: 'DM Sans',
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        child: _uploading
+            ? const SizedBox(
+                width: 22, height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF2C1810)),
+              )
+            : Text(
+                'Upload Certificate',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
     );
   }

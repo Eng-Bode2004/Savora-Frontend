@@ -37,7 +37,7 @@ class AppRouter {
         );
       case Routes.chefIdPhoto:
         return MaterialPageRoute(
-          builder: (_) => const IdPhotoScreen(),
+          builder: (_) => const IdPhotoScreen(profileId: null),
           settings: settings,
         );
       case Routes.chefLocationSelection:

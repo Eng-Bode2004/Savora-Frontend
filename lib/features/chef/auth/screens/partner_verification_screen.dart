@@ -10,9 +10,9 @@ import 'payment_method_screen.dart';
 import 'waiting_approval_screen.dart';
 
 const List<String> _stepFields = [
+  'Health_Certificate_Status',
   'Items_Can_Make_Status',
   'Address_Status',
-  'Health_Certificate_Status',
   'National_ID_Status',
   'Payment_Method_Status',
 ];
@@ -28,9 +28,9 @@ class PartnerVerificationScreen extends StatefulWidget {
 class _PartnerVerificationScreenState
     extends State<PartnerVerificationScreen> with TickerProviderStateMixin {
   final List<_StepState> _steps = [
+    _StepState(label: 'Upload Health certificate', icon: Icons.medical_services),
     _StepState(label: 'Choose items Chief can make', icon: Icons.restaurant_menu),
     _StepState(label: 'Choose address', icon: Icons.location_on),
-    _StepState(label: 'Upload Health certificate', icon: Icons.medical_services),
     _StepState(label: 'Upload National ID', icon: Icons.badge),
     _StepState(label: 'Upload Payment method', icon: Icons.payment),
     _StepState(label: 'Waiting for Admin Approval', icon: Icons.hourglass_empty),
@@ -62,10 +62,13 @@ class _PartnerVerificationScreenState
   }
 
   Future<void> _loadStepStatuses() async {
-    final profileId = authState.profileId;
+    var profileId = authState.profileId;
     if (profileId == null) {
-      if (mounted) setState(() => _loadingStatus = false);
-      return;
+      profileId = await _loadProfileId();
+      if (profileId == null) {
+        if (mounted) setState(() => _loadingStatus = false);
+        return;
+      }
     }
     try {
       final data = await SavoraApi.getVerificationSteps(profileId);
@@ -96,13 +99,48 @@ class _PartnerVerificationScreenState
     _openStepScreen(index);
   }
 
+  Future<String?> _loadProfileId() async {
+    final existing = authState.profileId;
+    if (existing != null) return existing;
+    final userId = authState.userId;
+    if (userId == null) return null;
+    try {
+      final userData = await SavoraApi.getUserById(userId);
+      final user = userData['data'] as Map<String, dynamic>?;
+      final profileId = user?['profile'] as String?;
+      if (profileId != null && profileId.isNotEmpty) {
+        final profile = await SavoraApi.getChiefProfile(profileId);
+        final profileObj = profile['profile'] as Map<String, dynamic>?;
+        if (profileObj != null) {
+          authState.setProfileData(profileObj);
+          authState.setProfileId(profileId);
+        }
+        return profileId;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> _openStepScreen(int index) async {
     switch (index) {
-      case 0:
+      case 0: {
+        var profileId = authState.profileId;
+        if (profileId == null) {
+          profileId = await _loadProfileId();
+        }
+        if (profileId == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Profile not loaded. Please log in again.'), backgroundColor: Colors.red),
+            );
+          }
+          break;
+        }
+        final pid = profileId;
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const SelectSpecializedCategories(),
+            builder: (_) => HealthCertificateScreen(profileId: pid),
           ),
         );
         if (result == true && mounted) {
@@ -110,35 +148,74 @@ class _PartnerVerificationScreenState
           _advanceIfReady();
         }
         break;
+      }
       case 1:
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const SelectSpecializedCategories(),
+          ),
+        );
+        if (result == true && mounted) {
+          setState(() => _steps[1].completed = true);
+          _advanceIfReady();
+        }
+        break;
+      case 2: {
+        var profileId = authState.profileId;
+        if (profileId == null) profileId = await _loadProfileId();
+        if (profileId == null) break;
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => const LocationSetupScreen(),
           ),
         );
-        if (result != null && mounted) {
-          setState(() => _steps[1].completed = true);
-          _advanceIfReady();
+        if (result is Map<String, dynamic> && mounted) {
+          try {
+            final details = (result['addressDetails'] as String?) ?? '';
+            final parts = details.split(',');
+            await SavoraApi.createAddress({
+              'Profile_id': profileId,
+              'latitude': result['latitude'],
+              'longitude': result['longitude'],
+              'city': parts.isNotEmpty ? parts[0].trim() : '',
+              'country': parts.length > 1 ? parts.last.trim() : '',
+              'street': (result['addressName'] as String?) ?? '',
+              'label': (result['addressName'] as String?) ?? 'Savora Kitchen',
+              'address_type': 'home',
+              'is_primary': true,
+            });
+            await SavoraApi.verifyStep(profileId: profileId, step: 'Address_Status', status: 'verified');
+            if (mounted) {
+              setState(() => _steps[2].completed = true);
+              _advanceIfReady();
+            }
+          } catch (e) {
+            if (mounted) {
+              final msg = e.toString().replaceFirst('Exception: ', '');
+              final isOutsideZone = msg.toLowerCase().contains('outside all service');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(isOutsideZone
+                      ? 'This address is outside our service area. Please choose a different location.'
+                      : msg),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
         }
         break;
-      case 2:
+      }
+      case 3: {
+        var profileId = authState.profileId;
+        if (profileId == null) profileId = await _loadProfileId();
+        if (profileId == null) break;
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const HealthCertificateScreen(),
-          ),
-        );
-        if (result == true && mounted) {
-          setState(() => _steps[2].completed = true);
-          _advanceIfReady();
-        }
-        break;
-      case 3:
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const IdPhotoScreen(),
+            builder: (_) => IdPhotoScreen(profileId: profileId),
           ),
         );
         if (result == true && mounted) {
@@ -146,20 +223,36 @@ class _PartnerVerificationScreenState
           _advanceIfReady();
         }
         break;
-      case 4:
+      }
+      case 4: {
+        var profileId = authState.profileId;
+        if (profileId == null) profileId = await _loadProfileId();
+        if (profileId == null) break;
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const PaymentMethodScreen(),
+            builder: (_) => PaymentMethodScreen(profileId: profileId),
           ),
         );
         if (result == true && mounted) {
+          try {
+            await SavoraApi.verifyStep(profileId: profileId, step: 'Payment_Method_Status', status: 'verified');
+          } catch (_) {}
           setState(() => _steps[4].completed = true);
           _advanceIfReady();
         }
         break;
-      case 5:
+      }
+      case 5: {
+        var profileId = authState.profileId;
+        if (profileId == null) profileId = await _loadProfileId();
+        if (profileId == null) break;
         _steps[5].completed = true;
+        try {
+          await SavoraApi.submitForReview(profileId);
+        } catch (_) {
+          // submission already succeeded on server or is idempotent
+        }
         if (mounted) {
           Navigator.push(
             context,
@@ -169,6 +262,7 @@ class _PartnerVerificationScreenState
           );
         }
         break;
+      }
     }
   }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../../state/providers/auth_provider.dart';
 
 class SavoraApi {
@@ -22,9 +23,11 @@ class SavoraApi {
   static const String subcategoryBase = 'https://savora-subcategoriesservices-production.up.railway.app/api/v1/subcategories';
   static const String customerBase = 'https://savoracustomerprofile-services-production.up.railway.app/api/v1/customer-profile';
   static const String paymentProviderBase = 'https://savorapaymentprovider-services-production.up.railway.app/api/v1/payment-provider';
+  static const String imagesBase  = 'https://savora-imageservices-production.up.railway.app/api/v2/images';
   static const String addressBase = 'https://savoraaddress-services-production.up.railway.app/api/v1/address';
+  static const String nationalIdBase = 'https://savoranationalid-services-production.up.railway.app/api/v2/national-id';
 
-  static const Duration _timeout = Duration(seconds: 15);
+  static const Duration _timeout = Duration(seconds: 30);
 
   static Map<String, String> get _headers => {'Content-Type': 'application/json'};
 
@@ -51,6 +54,27 @@ class SavoraApi {
 
   static Future<http.Response> _patch(String url, {Map<String, String>? headers, Object? body}) =>
       http.patch(Uri.parse(url), headers: headers, body: body).timeout(_timeout);
+
+  static String _mimeFromName(String name) {
+    final ext = name.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'jpg': case 'jpeg': return 'image/jpeg';
+      case 'png': return 'image/png';
+      case 'webp': return 'image/webp';
+      default: return 'image/jpeg';
+    }
+  }
+
+  static Future<Map<String, dynamic>> _uploadBytes(String url, List<int> bytes, String filename, {Map<String, String>? fields}) async {
+    final request = http.MultipartRequest('POST', Uri.parse(url));
+    if (fields != null) request.fields.addAll(fields);
+    request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename, contentType: MediaType.parse(_mimeFromName(filename))));
+    final streamed = await request.send().timeout(const Duration(seconds: 120));
+    final res = await http.Response.fromStream(streamed);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 201) return data;
+    throw Exception(_extractError(data));
+  }
 
   // ── Auth ──────────────────────────────────────────────────────────────
 
@@ -189,6 +213,13 @@ class SavoraApi {
     throw Exception(_extractError(data));
   }
 
+  static Future<Map<String, dynamic>> getUserById(String userId) async {
+    final res = await _get('$userBase/$userId', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
   static Future<Map<String, dynamic>> getUserLanguage(String userId) async {
     final res = await _get('$userBase/$userId/language', headers: _authHeaders);
 
@@ -266,14 +297,23 @@ class SavoraApi {
   // ── Payment Providers ────────────────────────────────────────────────
 
   static Future<List<Map<String, dynamic>>> getActivePaymentProviders() async {
-    final res = await _get('$paymentProviderBase/active', headers: _headers);
-    final data = jsonDecode(res.body) as Map<String, dynamic>;
-    if (res.statusCode == 200) {
-      final list = data['data'];
-      if (list is List) return list.cast<Map<String, dynamic>>();
-      return [];
+    try {
+      final res = await _get('$paymentProviderBase/active', headers: _headers);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final list = data['data'];
+        if (list is List) return list.cast<Map<String, dynamic>>();
+        return [];
+      }
+      throw Exception(_extractError(jsonDecode(res.body)));
+    } catch (_) {
+      return [
+        {'name': 'Vodafone Cash', 'Provider': 'Vodafone Cash'},
+        {'name': 'Orange Cash', 'Provider': 'Orange Cash'},
+        {'name': 'Etisalat Cash', 'Provider': 'Etisalat Cash'},
+        {'name': 'Bank Transfer', 'Provider': 'Bank Transfer'},
+      ];
     }
-    throw Exception(_extractError(data));
   }
 
   // ── Address ──────────────────────────────────────────────────────────
@@ -376,6 +416,114 @@ class SavoraApi {
     final res = await _patch('$chiefBase/$profileId/verify-step', headers: _authHeaders, body: jsonEncode({
       'step': step, 'status': status,
     }));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> uploadHealthCertificateImage(List<int> bytes, String filename) async {
+    return _uploadBytes('$imagesBase/chief-health-certificate', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> assignHealthCertificateUrl({
+    required String profileId,
+    required String certificateUrl,
+  }) async {
+    final res = await _patch('$chiefBase/$profileId/health-certificate', headers: _authHeaders, body: jsonEncode({
+      'certificateUrl': certificateUrl,
+    }));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Payment Method ─────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> uploadPaymentMethod({
+    required String profileId,
+    required String provider,
+    required String details,
+  }) async {
+    final res = await _patch('$chiefBase/$profileId/payment-method', headers: _authHeaders, body: jsonEncode({
+      'provider': provider,
+      'details': details,
+    }));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── National ID Images ──────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> uploadFrontIdImage(List<int> bytes, String filename) async {
+    return _uploadBytes('$imagesBase/chief-frontID', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> uploadBackIdImage(List<int> bytes, String filename) async {
+    return _uploadBytes('$imagesBase/chief-backID', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> createNationalId({
+    required String frontImageURL,
+    required String backImageURL,
+  }) async {
+    final res = await _post(nationalIdBase, headers: _headers, body: jsonEncode({
+      'frontImageURL': frontImageURL,
+      'backImageURL': backImageURL,
+    }));
+    if (res.statusCode == 201) return jsonDecode(res.body) as Map<String, dynamic>;
+    throw Exception(_extractError(jsonDecode(res.body)));
+  }
+
+  static Future<Map<String, dynamic>> assignNationalIdUrls({
+    required String profileId,
+    required String frontImageURL,
+    required String backImageURL,
+  }) async {
+    final res = await _patch('$chiefBase/$profileId/national-id', headers: _authHeaders, body: jsonEncode({
+      'frontImageURL': frontImageURL,
+      'backImageURL': backImageURL,
+    }));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Admin Verification ───────────────────────────────────────────────
+
+  /// Chef: submit completed verification for admin review
+  static Future<Map<String, dynamic>> submitForReview(String profileId) async {
+    final res = await _patch('$chiefBase/$profileId/submit-verification', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  /// Admin: get all chiefs pending review
+  static Future<List<dynamic>> getPendingVerifications() async {
+    final res = await _get('$chiefBase/admin/pending-verifications', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) {
+      final list = data['profiles'];
+      if (list is List) return list;
+      return [];
+    }
+    throw Exception(_extractError(data));
+  }
+
+  /// Admin: approve a chief's verification
+  static Future<Map<String, dynamic>> approveVerification(String profileId) async {
+    final res = await _patch('$chiefBase/$profileId/approve-verification', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  /// Admin: reject a chief's verification with optional reason
+  static Future<Map<String, dynamic>> rejectVerification(String profileId, {String? reason}) async {
+    final res = await _patch('$chiefBase/$profileId/reject-verification',
+        headers: _authHeaders,
+        body: reason != null ? jsonEncode({'reason': reason}) : null);
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
     throw Exception(_extractError(data));
