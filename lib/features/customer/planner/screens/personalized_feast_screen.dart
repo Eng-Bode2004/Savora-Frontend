@@ -24,7 +24,7 @@ class _PersonalizedFeastScreenState extends State<PersonalizedFeastScreen>
   late final AnimationController _entrance;
   late final AnimationController _spin;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
   static const _total = 'EGP 1,840.00';
   static const _eta = '45–55m';

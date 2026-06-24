@@ -34,7 +34,7 @@ class _NameEntryScreenState extends State<NameEntryScreen>
   final _nameCtrl  = TextEditingController();
   final _nameFocus = FocusNode();
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
@@ -60,8 +60,7 @@ class _NameEntryScreenState extends State<NameEntryScreen>
     themeModeNotifier.addListener(_onThemeChanged);
   }
 
-  void _onThemeChanged() =>
-      setState(() => _isDarkMode = themeModeNotifier.value == ThemeMode.dark);
+  void _onThemeChanged() => setState(() {});
 
   @override
   void dispose() {

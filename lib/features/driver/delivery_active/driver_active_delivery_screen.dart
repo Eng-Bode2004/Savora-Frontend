@@ -128,6 +128,83 @@ class _DriverActiveDeliveryScreenState
             ),
           ),
           const SizedBox(height: 16),
+
+          // ================= CHEF DETAILS =================
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.storefront, color: cs.primary, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text('CHEF / PICKUP',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              letterSpacing: 1.2, fontWeight: FontWeight.bold, color: cs.onSurfaceVariant)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: cs.primary.withOpacity(0.12),
+                        backgroundImage: activeOrder.chefImage.isNotEmpty
+                            ? NetworkImage(activeOrder.chefImage)
+                            : null,
+                        child: activeOrder.chefImage.isEmpty
+                            ? Icon(Icons.person, color: cs.primary)
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(activeOrder.chefName.isNotEmpty ? activeOrder.chefName : activeOrder.pickupName,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                            if (activeOrder.chefPhone.isNotEmpty)
+                              Text(activeOrder.chefPhone,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+                          ],
+                        ),
+                      ),
+                      if (activeOrder.chefPhone.isNotEmpty)
+                        IconButton(icon: Icon(Icons.phone, color: cs.primary), onPressed: () {}),
+                    ],
+                  ),
+                  if (activeOrder.chefAddress.isNotEmpty || activeOrder.pickupAddress.isNotEmpty) ...[
+                    const Divider(height: 20),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.location_on, size: 18, color: cs.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            activeOrder.chefAddress.isNotEmpty ? activeOrder.chefAddress : activeOrder.pickupAddress,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ================= CUSTOMER DETAILS =================
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -140,24 +217,27 @@ class _DriverActiveDeliveryScreenState
                       Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: cs.surfaceContainerHighest,
-                            child: Icon(Icons.person, color: cs.primary),
+                            backgroundColor: cs.secondary.withOpacity(0.12),
+                            backgroundImage: activeOrder.customerAvatar != null
+                                ? NetworkImage(activeOrder.customerAvatar!)
+                                : null,
+                            child: activeOrder.customerAvatar == null
+                                ? Icon(Icons.person, color: cs.secondary)
+                                : null,
                           ),
                           const SizedBox(width: 12),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(activeOrder.customerName,
-                                  style:
-                                      Theme.of(context).textTheme.titleLarge),
+                                  style: Theme.of(context).textTheme.titleLarge),
                               Row(
                                 children: [
                                   Icon(Icons.star, color: cs.primary, size: 14),
                                   const SizedBox(width: 4),
                                   Text(
                                     '${activeOrder.customerRating} Customer',
-                                    style:
-                                        Theme.of(context).textTheme.labelSmall,
+                                    style: Theme.of(context).textTheme.labelSmall,
                                   ),
                                 ],
                               ),
@@ -167,13 +247,14 @@ class _DriverActiveDeliveryScreenState
                       ),
                       Row(
                         children: [
+                          if (activeOrder.customerPhone.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.phone),
+                              onPressed: () {},
+                              color: cs.onSurfaceVariant,
+                            ),
                           IconButton(
                             icon: const Icon(Icons.chat_bubble_outline),
-                            onPressed: () {},
-                            color: cs.onSurfaceVariant,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.call),
                             onPressed: () {},
                             color: cs.onSurfaceVariant,
                           ),
@@ -181,26 +262,39 @@ class _DriverActiveDeliveryScreenState
                       ),
                     ],
                   ),
-                  Divider(height: 32, color: cs.outlineVariant),
+                  if (activeOrder.customerPhone.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.call_outlined, size: 14, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Text(activeOrder.customerPhone,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+                      ],
+                    ),
+                  ],
+                  const Divider(height: 24),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.location_on, color: cs.primary),
+                      Icon(Icons.location_on, color: cs.secondary),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('DELIVERY ADDRESS',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
-                                    ?.copyWith(
-                                        fontSize: 10, letterSpacing: 1.2)),
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    fontSize: 10, letterSpacing: 1.2)),
                             const SizedBox(height: 4),
+                            if (activeOrder.dropoffLabel.isNotEmpty)
+                              Text(activeOrder.dropoffLabel,
+                                  style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
                             Text(activeOrder.dropoffAddress,
-                                style:
-                                    Theme.of(context).textTheme.bodyLarge),
+                                style: Theme.of(context).textTheme.bodyLarge),
+                            if (activeOrder.dropoffCity.isNotEmpty)
+                              Text(activeOrder.dropoffCity,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                             if (activeOrder.deliveryNotes != null) ...[
                               const SizedBox(height: 8),
                               Container(
@@ -208,17 +302,12 @@ class _DriverActiveDeliveryScreenState
                                 decoration: BoxDecoration(
                                   color: cs.primaryContainer.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: cs.primary.withOpacity(0.2)),
+                                  border: Border.all(color: cs.primary.withOpacity(0.2)),
                                 ),
                                 child: Text(
                                   '"${activeOrder.deliveryNotes}"',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                          color: cs.primary,
-                                          fontStyle: FontStyle.italic),
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: cs.primary, fontStyle: FontStyle.italic),
                                 ),
                               ),
                             ],

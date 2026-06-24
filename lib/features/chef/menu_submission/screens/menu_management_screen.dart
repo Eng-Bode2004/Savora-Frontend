@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:savora_app/core/routing/routes.dart' hide RecipeDetailArgs;
 import 'package:savora_app/core/theme/app_colors.dart';
 import 'package:savora_app/core/theme/app_spacing.dart';
 import 'package:savora_app/core/theme/app_text_styles.dart';
-import 'package:savora_app/data/models/dish_model.dart';
+import 'package:savora_app/core/network/savora_api.dart';
+import 'package:savora_app/state/providers/auth_provider.dart';
 
-import '../../dashboard/widgets/dashboard_widgets.dart' show StatMiniCard;
-import '../widgets/menu_widgets.dart';
+import 'dish_availability_screen.dart';
+import 'dish_detail_screen.dart';
+import 'package:savora_app/features/chef/auth/screens/Select%20Specialized%20Categories.dart';
 
-/// Menu tab home: the chef's live dishes with availability toggles.
 class MenuManagementScreen extends StatefulWidget {
   const MenuManagementScreen({super.key});
 
@@ -17,214 +17,345 @@ class MenuManagementScreen extends StatefulWidget {
 }
 
 class _MenuManagementScreenState extends State<MenuManagementScreen> {
-  List<DishModel> _dishes = [
-    DishModel(
-      id: 'shish-tawook',
-      name: 'Shish Tawook',
-      imageUrl:
-          'https://images.unsplash.com/photo-1633321088355-d0f81d8c4f15?w=400',
-      inStock: true,
-      recipe: RecipeModel(
-        category: 'Mediterranean Standard',
-        title: 'Shish Tawook',
-        description:
-            'Marinated chargrilled chicken skewers, Savora house spice blend.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1633321088355-d0f81d8c4f15?w=800',
-        prepTimeMinutes: 30,
-        servings: 2,
-        ingredients: const [
-          RecipeIngredient(id: '1', label: '600g Chicken Thigh, Cubed'),
-          RecipeIngredient(id: '2', label: '1/2 Cup Yogurt Marinade'),
-          RecipeIngredient(id: '3', label: '2 Tbsp Savora Spice Blend'),
-        ],
-        steps: const [
-          RecipeStep(
-              order: 1,
-              title: 'Marinate',
-              description:
-                  'Marinate chicken for at least 4 hours, ideally overnight.'),
-          RecipeStep(
-              order: 2,
-              title: 'Skewer',
-              description:
-                  'Thread onto skewers, leaving small gaps for even cooking.'),
-          RecipeStep(
-              order: 3,
-              title: 'Grill',
-              description:
-                  'Grill over high heat, turning every 2 minutes until charred.'),
-        ],
-        qualityChecks: const [
-          RecipeQualityCheck(
-              label: 'Internal temperature reaches 75°C (165°F)'),
-          RecipeQualityCheck(label: 'Even char on all sides'),
-        ],
-      ),
-    ),
-    DishModel(
-      id: 'classic-kofta',
-      name: 'Classic Kofta',
-      imageUrl:
-          'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=400',
-      inStock: true,
-      recipe: RecipeModel(
-        category: 'Mediterranean Standard',
-        title: 'Classic Beef Kofta',
-        description:
-            'Traditional Lebanese-style minced beef skewers seasoned with warm spices and fresh herbs. A kitchen staple for efficiency and flavor.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=800',
-        prepTimeMinutes: 25,
-        servings: 4,
-        ingredients: const [
-          RecipeIngredient(id: '1', label: '500g Ground Beef (80/20 Lean)'),
-          RecipeIngredient(
-              id: '2', label: '1/2 Cup Fresh Parsley, finely chopped'),
-          RecipeIngredient(
-              id: '3', label: '1 Small Onion, grated and squeezed'),
-          RecipeIngredient(id: '4', label: '2 Garlic Cloves, minced'),
-          RecipeIngredient(id: '5', label: '1 tsp Ground Allspice & Cumin'),
-          RecipeIngredient(id: '6', label: 'Salt and Black Pepper to taste'),
-        ],
-        steps: const [
-          RecipeStep(
-            order: 1,
-            title: 'Prep Aromatic Mix',
-            description:
-                'Combine the grated onion, minced garlic, and parsley in a large stainless steel bowl. Ensure all moisture is squeezed from the onions to maintain meat integrity.',
-          ),
-          RecipeStep(
-            order: 2,
-            title: 'Bind and Season',
-            description:
-                'Add the ground beef and dry spices. Mix thoroughly by hand for 3-4 minutes until the mixture becomes slightly tacky — this ensures the kofta stays on the skewer.',
-          ),
-          RecipeStep(
-            order: 3,
-            title: 'Skewer and Shape',
-            description:
-                'Divide into 4 equal portions. Mold each onto a metal or soaked wooden skewer into long cylinders. Chill for 10 minutes before grilling for best results.',
-          ),
-        ],
-        qualityChecks: const [
-          RecipeQualityCheck(
-              label:
-                  'Internal Temperature: Ensure beef reaches a safe 160°F (71°C) for service.'),
-          RecipeQualityCheck(
-              label:
-                  'Visual Check: Deep caramelization (Maillard reaction) is required for authentic flavor.'),
-        ],
-      ),
-    ),
-    DishModel(
-      id: 'artisan-falafel',
-      name: 'Artisan Falafel',
-      imageUrl:
-          'https://images.unsplash.com/photo-1593001874117-c99c800e3eb6?w=400',
-      inStock: false,
-      recipe: RecipeModel(
-        category: 'Mediterranean Standard',
-        title: 'Artisan Falafel',
-        description:
-            'Crisp herb-packed chickpea falafel, hand-formed and fried to order.',
-        imageUrl:
-            'https://images.unsplash.com/photo-1593001874117-c99c800e3eb6?w=800',
-        prepTimeMinutes: 20,
-        servings: 4,
-        ingredients: const [
-          RecipeIngredient(id: '1', label: '500g Soaked Chickpeas')
-        ],
-        steps: const [
-          RecipeStep(
-              order: 1,
-              title: 'Blend',
-              description:
-                  'Blend chickpeas with herbs and spices until coarse.')
-        ],
-        qualityChecks: const [
-          RecipeQualityCheck(label: 'Golden-brown, crisp exterior')
-        ],
-      ),
-    ),
-  ];
+  bool _loading = true;
+  String? _error;
+  List<_PreferredDish> _dishes = [];
 
-  void _toggle(DishModel dish, bool inStock) {
-    setState(() {
-      _dishes = [
-        for (final d in _dishes)
-          if (d.id == dish.id) d.copyWith(inStock: inStock) else d
-      ];
-    });
+  @override
+  void initState() {
+    super.initState();
+    _load();
   }
 
-  void _viewStandard(DishModel dish) {
-    if (dish.recipe == null) return;
-    Navigator.of(context)
-        .pushNamed(Routes.chefRecipeDetail, arguments: RecipeDetailArgs(dish));
+  Future<void> _load() async {
+    final chefId = authState.profileId;
+    if (chefId == null) {
+      if (mounted) setState(() { _error = 'Please log in first'; _loading = false; });
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final data = await SavoraApi.getPreferredDishes(chefId);
+      final list = data['preferred'] as List? ?? [];
+
+      final dishIds = list
+          .map((e) => (e as Map<String, dynamic>)['dish_id'] as String? ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      final details = <String, Map<String, dynamic>>{};
+      if (dishIds.isNotEmpty) {
+        final results = await Future.wait(
+          dishIds.map((id) => SavoraApi.getDishById(id).catchError((_) => <String, dynamic>{})),
+        );
+        for (int i = 0; i < dishIds.length; i++) {
+          final r = results[i];
+          if (r.isNotEmpty) {
+            final dish = r['dish'] as Map<String, dynamic>?;
+            if (dish != null) details[dishIds[i]] = dish;
+          }
+        }
+      }
+
+      final now = DateTime.now();
+      final today = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final availMap = <String, Map<String, dynamic>>{};
+      try {
+        final availData = await SavoraApi.getAvailabilityByChiefAndDate(chefId, today);
+        final availList = availData['availabilities'] as List? ?? [];
+        for (final a in availList) {
+          final did = a['dish_id'] as String? ?? '';
+          if (did.isNotEmpty) availMap[did] = a as Map<String, dynamic>;
+        }
+      } catch (_) {}
+
+      _dishes = list.map((e) {
+        final m = e as Map<String, dynamic>;
+        final dishId = m['dish_id'] as String? ?? '';
+        final dish = details[dishId];
+        final avail = availMap[dishId];
+        final dishName = dish?['english_name'] as String? ??
+            m['dish_name'] as String? ?? m['english_name'] as String? ?? dishId;
+        return _PreferredDish(
+          dishId: dishId,
+          dishName: dishName,
+          imageUrl: dish?['image'] as String? ?? '',
+          price: (dish?['price'] as num?)?.toInt() ?? 0,
+          unitType: dish?['unit_type'] as String? ?? '',
+          stockAvailable: (avail?['pieces_available'] as num?)?.toInt() ?? 0,
+          stockSold: (avail?['pieces_sold'] as num?)?.toInt() ?? 0,
+          dishData: dish,
+        );
+      }).toList();
+      _error = null;
+    } catch (e) { _error = 'Failed to load: $e'; }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _remove(String dishId) async {
+    final chefId = authState.profileId;
+    if (chefId == null) return;
+    try {
+      await SavoraApi.removePreferredDish(chiefId: chefId, dishId: dishId);
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Failed to remove: $e'),
+          backgroundColor: Colors.red.shade700,
+        ));
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    final activeCount = _dishes.where((d) => d.inStock).length;
+    final textColor = AppColors.textOf(brightness);
+    final mutedColor = AppColors.textMutedOf(brightness);
+    final surface = AppColors.surfaceOf(brightness);
 
     return SafeArea(
       top: false,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.screenPadding, vertical: AppSpacing.md),
-        children: [
-          Text('Menu Management',
-              style: AppTextStyles.headlineLg
-                  .copyWith(color: AppColors.textOf(brightness))),
-          const SizedBox(height: 4),
-          Text(
-            'Update daily availability for your certified recipes.',
-            style: AppTextStyles.bodyMd
-                .copyWith(color: AppColors.textMutedOf(brightness)),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          for (final dish in _dishes) ...[
-            MenuItemCard(
-              imageUrl: dish.imageUrl,
-              name: dish.name,
-              inStock: dish.inStock,
-              isCertifiedStandard: dish.isCertifiedStandard,
-              onToggle: (v) => _toggle(dish, v),
-              onViewStandard: () => _viewStandard(dish),
+      child: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding, vertical: AppSpacing.md),
+              children: [
+                Text('Menu Management',
+                    style: AppTextStyles.headlineLg.copyWith(color: textColor)),
+                const SizedBox(height: 4),
+                Text('Set today\'s stock & manage your preferred dishes.',
+                    style: AppTextStyles.bodyMd.copyWith(color: mutedColor)),
+                const SizedBox(height: AppSpacing.lg),
+
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DishAvailabilityScreen()),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.inventory_2_rounded, color: AppColors.gold, size: 22),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text('Set Today\'s Stock',
+                              style: AppTextStyles.bodyMd.copyWith(
+                                  fontWeight: FontWeight.w700, color: textColor)),
+                        ),
+                        Icon(Icons.arrow_forward_ios_rounded, size: 14, color: mutedColor),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                GestureDetector(
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SelectSpecializedCategories(fromManagement: true)),
+                    );
+                    if (mounted) _load();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.borderOf(brightness)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.add_circle_outline_rounded, color: AppColors.gold, size: 20),
+                        const SizedBox(width: 12),
+                        Text('Add dishes to your menu',
+                            style: AppTextStyles.bodyMd.copyWith(color: textColor)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                if (_error != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.ember.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: AppColors.ember, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(_error!, style: TextStyle(color: AppColors.ember, fontSize: 13))),
+                      ],
+                    ),
+                  ),
+
+                if (_dishes.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text('Your Dishes (${_dishes.length})',
+                        style: AppTextStyles.titleLg.copyWith(color: textColor)),
+                  ),
+
+                if (_error == null && _dishes.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.restaurant_menu_rounded, size: 64, color: mutedColor),
+                          const SizedBox(height: 16),
+                          Text('No preferred dishes yet',
+                              style: AppTextStyles.bodyMd.copyWith(color: mutedColor)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ..._dishes.map((d) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _DishCard(
+                      dish: d,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => DishDetailScreen(
+                              dishId: d.dishId,
+                              initialData: d.dishData,
+                            ),
+                          ),
+                        );
+                      },
+                      onDelete: () => _remove(d.dishId),
+                    ),
+                  )),
+              ],
             ),
-            const SizedBox(height: AppSpacing.sm),
+    );
+  }
+}
+
+class _DishCard extends StatelessWidget {
+  final _PreferredDish dish;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _DishCard({required this.dish, required this.onTap, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    final textColor = AppColors.textOf(brightness);
+    final mutedColor = AppColors.textMutedOf(brightness);
+    final hasStock = dish.stockAvailable > 0;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceOf(brightness),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.borderOf(brightness)),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
+              child: dish.imageUrl.isNotEmpty
+                  ? Image.network(dish.imageUrl, width: 90, height: 90, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 90, height: 90,
+                        color: AppColors.surfaceSunkenOf(brightness),
+                        child: const Icon(Icons.restaurant_rounded, color: AppColors.gold, size: 28),
+                      ))
+                  : Container(
+                      width: 90, height: 90,
+                      color: AppColors.surfaceSunkenOf(brightness),
+                      child: const Icon(Icons.restaurant_rounded, color: AppColors.gold, size: 28)),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(dish.dishName,
+                        style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600, color: textColor, fontSize: 15),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    if (dish.price > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text('${dish.price} EGP${dish.unitType.isNotEmpty ? ' / ${dish.unitType}' : ''}',
+                            style: TextStyle(fontSize: 12, color: AppColors.gold)),
+                      ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: hasStock ? Colors.green.withValues(alpha: 0.1) : AppColors.ember.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        hasStock ? 'Stock: ${dish.stockAvailable}' : 'Not set today',
+                        style: TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w600,
+                          color: hasStock ? Colors.green.shade700 : AppColors.ember,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: onDelete,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.ember.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.delete_outline_rounded, color: AppColors.ember, size: 18),
+                ),
+              ),
+            ),
           ],
-          LowStockBanner(
-            message:
-                'Chef, you reported low stock on chickpeas. Refill inventory to reactivate this recipe for orders.',
-            onOrderSupplies: () {},
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              const Expanded(
-                child: StatMiniCard(
-                  icon: Icons.trending_up_rounded,
-                  iconColor: AppColors.gold,
-                  value: '84%',
-                  label: 'Menu Vitality',
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: StatMiniCard(
-                  icon: Icons.task_alt_rounded,
-                  iconColor: AppColors.terracotta,
-                  value: '$activeCount/${_dishes.length}',
-                  label: 'Active Dishes',
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
+}
+
+class _PreferredDish {
+  final String dishId;
+  final String dishName;
+  final String imageUrl;
+  final int price;
+  final String unitType;
+  final int stockAvailable;
+  final int stockSold;
+  final Map<String, dynamic>? dishData;
+
+  _PreferredDish({
+    required this.dishId,
+    required this.dishName,
+    this.imageUrl = '',
+    this.price = 0,
+    this.unitType = '',
+    this.stockAvailable = 0,
+    this.stockSold = 0,
+    this.dishData,
+  });
 }

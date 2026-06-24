@@ -20,7 +20,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     with TickerProviderStateMixin {
   late final AnimationController _entrance;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
   late List<_Notif> _today = [
     _Notif(

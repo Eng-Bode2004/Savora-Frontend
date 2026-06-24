@@ -22,6 +22,7 @@ class AuthState extends ChangeNotifier {
     if (_roleKey == null) return false;
     if (_roleKey == 'Chef') return _profileData?['Is_Verified'] == true;
     if (_roleKey == 'Customer') return _profileData?['Is_Verified'] == true;
+    if (_roleKey == 'Delivery') return _profileData?['Is_Verified'] == true;
     return true;
   }
 

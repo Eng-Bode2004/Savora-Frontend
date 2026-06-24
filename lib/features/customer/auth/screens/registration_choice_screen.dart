@@ -27,7 +27,7 @@ class _RegistrationChoiceScreenState extends State<RegistrationChoiceScreen>
   late final AnimationController _entrance;
   late final AnimationController _float;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
   Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
   Color get _bgColor2 => _isDarkMode ? AppColors.espresso : const Color(0xFFF7F4EE);

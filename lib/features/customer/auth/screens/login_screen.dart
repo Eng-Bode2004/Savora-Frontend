@@ -11,6 +11,10 @@ import '../../shell/customer_shell.dart';
 import '../../../chef/shell/chef_shell.dart';
 import 'name_entry_screen.dart' show NameEntryScreen;
 import 'otp_screen.dart';
+import 'forgot_password_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../driver/services/driver_router.dart';
+import '../../../driver/services/driver_theme.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -42,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _phoneFocus = FocusNode();
   final _passFocus = FocusNode();
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _guestLoading = false;
@@ -115,8 +119,7 @@ class _LoginScreenState extends State<LoginScreen>
   void _toggleDarkMode() {
     HapticFeedback.lightImpact();
     setState(() {
-      _isDarkMode = !_isDarkMode;
-      themeModeNotifier.value = _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+      themeModeNotifier.value = _isDarkMode ? ThemeMode.light : ThemeMode.dark;
     });
   }
 
@@ -151,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen>
         page = ChefShell(initialIndex: chefTab);
         break;
       case 'Delivery':
-        page = const CustomerShell();
+        page = const ProviderScope(child: DriverAppWrapper());
         break;
       default:
         page = const CustomerShell();
@@ -179,20 +182,103 @@ class _LoginScreenState extends State<LoginScreen>
     if (_method == _LoginMethod.phone) {
       final phone = _phoneController.text.trim();
       if (phone.length < 7) return;
-      final fullNumber = '+20 $phone';
+      _showPhoneLoginOptions(phone);
+      return;
+    }
+    _doLoginWithEmail();
+  }
+
+  void _showPhoneLoginOptions(String phone) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (_) => _PhoneLoginSheet(
+        isDark: _isDarkMode,
+        onSms: () {
+          Navigator.of(context).pop();
+          _doPhoneLogin(phone, viaWhatsApp: false);
+        },
+        onWhatsApp: () {
+          Navigator.of(context).pop();
+          _doPhoneLogin(phone, viaWhatsApp: true);
+        },
+      ),
+    );
+  }
+
+  Future<void> _doPhoneLogin(String phone, {required bool viaWhatsApp}) async {
+    final fullNumber = '+20 $phone';
+    setState(() => _isLoading = true);
+
+    try {
+      // Find or create user by phone
+      final findResult = await SavoraApi.findOrCreateByPhone(fullNumber);
+      final data = findResult['data'] as Map<String, dynamic>?;
+      final user = data?['user'] as Map<String, dynamic>?;
+      final userId = user?['_id'] as String?;
+      if (userId == null) throw Exception('Failed to get user');
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      // Navigate to OTP screen with userId
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => OtpScreen(
             contact: fullNumber,
+            userId: userId,
             isDarkMode: _isDarkMode,
             viaEmail: false,
-            onVerified: () => _enterShell(),
+            viaWhatsApp: viaWhatsApp,
+            viaSms: !viaWhatsApp,
+            onVerified: () {
+              // After OTP verification, login via phoneLogin
+              _completePhoneLogin(userId, Navigator.of(context));
+            },
           ),
         ),
       );
-      return;
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
-    _doLoginWithEmail();
+  }
+
+  Future<void> _completePhoneLogin(String userId, NavigatorState nav) async {
+    try {
+      final result = await SavoraApi.phoneLogin(userId);
+      if (!mounted) return;
+
+      final data = result['data'] as Map<String, dynamic>?;
+      final userData = data?['user'] as Map<String, dynamic>?;
+      final token = data?['token'] as String? ?? '';
+      final roleData = data?['role'] as Map<String, dynamic>?;
+      final roleKey = roleData?['english_name'] as String? ?? 'Customer';
+      final mappedRole = _apiToRoleKey[roleKey] ?? roleKey;
+      final fetchedUserId = userData?['_id'] as String? ?? userId;
+
+      authState.login(userId: fetchedUserId, token: token, roleKey: mappedRole);
+
+      if (!mounted) return;
+      _enterShell(roleKey: mappedRole);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _doLoginWithEmail() async {
@@ -246,6 +332,21 @@ class _LoginScreenState extends State<LoginScreen>
                   authState.setProfileData(profile);
                   authState.setProfileId(profile['_id'] as String? ?? profileId);
                   final pName = profile['name'] as String?;
+                  if (pName != null && pName.trim().isNotEmpty) {
+                    authState.setName(pName);
+                  }
+                }
+              }
+            } catch (_) {}
+          } else if (roleKey == 'Delivery') {
+            try {
+              final data = await SavoraApi.getDriverProfile(profileId);
+              if (mounted) {
+                final profileObj = data['profile'] as Map<String, dynamic>?;
+                if (profileObj != null) {
+                  authState.setProfileData(profileObj);
+                  authState.setProfileId(profileObj['_id'] as String? ?? profileId);
+                  final pName = profileObj['name'] as String?;
                   if (pName != null && pName.trim().isNotEmpty) {
                     authState.setName(pName);
                   }
@@ -741,7 +842,11 @@ class _LoginScreenState extends State<LoginScreen>
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                      );
+                    },
                     child: Text(
                       l.t('forgotPassword'),
                       style: const TextStyle(
@@ -1444,6 +1549,132 @@ class _FoodSpec {
 }
 
 // ════════════════════════════════════════════════════════
+// PHONE LOGIN BOTTOM SHEET (SMS vs WhatsApp)
+// ════════════════════════════════════════════════════════
+class _PhoneLoginSheet extends StatelessWidget {
+  const _PhoneLoginSheet({
+    required this.isDark,
+    required this.onSms,
+    required this.onWhatsApp,
+  });
+
+  final bool isDark;
+  final VoidCallback onSms;
+  final VoidCallback onWhatsApp;
+
+  @override
+  Widget build(BuildContext context) {
+    final sheetColor = isDark ? AppColors.espressoSoft : Colors.white;
+    final textColor = isDark ? AppColors.cream : const Color(0xFF161618);
+    final subColor = isDark ? AppColors.muted : const Color(0xFF8A8A8A);
+    final tileBg = isDark ? AppColors.glass : const Color(0xFFF5F3EF);
+    final border = isDark ? AppColors.glassBorder : const Color(0xFFE8E4DE);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: sheetColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: subColor.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Icon(Icons.phone_iphone_rounded, color: _kAccent, size: 22),
+              const SizedBox(width: 10),
+              Text('Verify via', style: TextStyle(fontFamily: 'DM Sans', fontSize: 18, fontWeight: FontWeight.w700, color: textColor)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _PhoneOption(
+            icon: Icons.chat_rounded,
+            title: 'WhatsApp',
+            subtitle: 'Receive code on WhatsApp',
+            tileBg: tileBg,
+            textColor: textColor,
+            subColor: subColor,
+            border: border,
+            onTap: onWhatsApp,
+          ),
+          const SizedBox(height: 10),
+          _PhoneOption(
+            icon: Icons.sms_rounded,
+            title: 'SMS',
+            subtitle: 'Receive code via text message',
+            tileBg: tileBg,
+            textColor: textColor,
+            subColor: subColor,
+            border: border,
+            onTap: onSms,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhoneOption extends StatelessWidget {
+  const _PhoneOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.tileBg,
+    required this.textColor,
+    required this.subColor,
+    required this.border,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color tileBg, textColor, subColor, border;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: tileBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: border, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _kAccent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: _kAccent, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontFamily: 'DM Sans', fontSize: 15, fontWeight: FontWeight.w600, color: textColor)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: subColor)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: subColor),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════
 // SOCIAL BUTTON
 // ════════════════════════════════════════════════════════
 class _SocialButton extends StatefulWidget {
@@ -1518,6 +1749,21 @@ class _SocialButtonState extends State<_SocialButton> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class DriverAppWrapper extends ConsumerWidget {
+  const DriverAppWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(driverRouterProvider);
+    return Router(
+      routerDelegate: router.routerDelegate,
+      routeInformationParser: router.routeInformationParser,
+      routeInformationProvider: router.routeInformationProvider,
+      backButtonDispatcher: router.backButtonDispatcher,
     );
   }
 }

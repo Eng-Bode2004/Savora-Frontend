@@ -63,7 +63,7 @@ class _SignupScreenState extends State<SignupScreen>
   // ── State ──
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
   bool _isLoading = false;
   bool _buttonPressed = false;
 
@@ -122,8 +122,7 @@ class _SignupScreenState extends State<SignupScreen>
   void _toggleDarkMode() {
     HapticFeedback.lightImpact();
     setState(() {
-      _isDarkMode = !_isDarkMode;
-      themeModeNotifier.value = _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+      themeModeNotifier.value = _isDarkMode ? ThemeMode.light : ThemeMode.dark;
     });
   }
 

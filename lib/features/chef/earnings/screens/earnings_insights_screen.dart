@@ -1,55 +1,115 @@
 import 'package:flutter/material.dart';
+import 'package:savora_app/core/network/savora_api.dart';
 import 'package:savora_app/core/theme/app_colors.dart';
 import 'package:savora_app/core/theme/app_spacing.dart';
 import 'package:savora_app/core/theme/app_text_styles.dart';
+import 'package:savora_app/state/providers/auth_provider.dart';
 
 import '../../widgets/chef_ui_kit.dart';
 import '../models/earnings_model.dart';
 import '../widgets/earnings_widgets.dart';
 
-/// Earnings tab home: weekly balance, activity chart, payout breakdown,
-/// and performance stats.
-class EarningsInsightsScreen extends StatelessWidget {
+class EarningsInsightsScreen extends StatefulWidget {
   const EarningsInsightsScreen({super.key});
 
-  static const _days = [
-    DailyActivity(dayLabel: 'M', percent: 40),
-    DailyActivity(dayLabel: 'T', percent: 60),
-    DailyActivity(dayLabel: 'W', percent: 55),
-    DailyActivity(dayLabel: 'T', percent: 85, highlighted: true),
-    DailyActivity(dayLabel: 'F', percent: 70),
-    DailyActivity(dayLabel: 'S', percent: 45),
-    DailyActivity(dayLabel: 'S', percent: 30),
-  ];
+  @override
+  State<EarningsInsightsScreen> createState() => _EarningsInsightsScreenState();
+}
 
-  static const _breakdown = [
-    EarningsBreakdownItem(
-        icon: Icons.payments_outlined, label: 'Base Pay', amount: 2105.00),
-    EarningsBreakdownItem(
-        icon: Icons.volunteer_activism_outlined, label: 'Tips', amount: 735.50),
-    EarningsBreakdownItem(
-        icon: Icons.info_outline,
-        label: 'Processing Fees',
-        amount: 24.10,
-        isNegative: true),
-  ];
+class _EarningsInsightsScreenState extends State<EarningsInsightsScreen> {
+  bool _loading = true;
+  String? _error;
 
-  static const _recent = [
-    RecentEarningEntry(
-        orderId: '8821',
-        icon: Icons.local_pizza_outlined,
-        timeLabel: 'Today, 2:45 PM',
-        amount: 42.50),
-    RecentEarningEntry(
-        orderId: '8819',
-        icon: Icons.outdoor_grill_outlined,
-        timeLabel: 'Today, 1:12 PM',
-        amount: 31.20),
-  ];
+  double _netEarnings = 0;
+  double _changePercent = 0;
+  int _orderCount = 0;
+  double _totalRevenue = 0;
+  double _appFee = 0;
+  List<DailyActivity> _days = [];
+  List<RecentEarningEntry> _recent = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final chefId = authState.profileId;
+    if (chefId == null) {
+      if (mounted) setState(() { _error = 'Please log in first'; _loading = false; });
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final data = await SavoraApi.getChefEarnings(chefId);
+      final e = data['earnings'] as Map<String, dynamic>? ?? {};
+      final daysRaw = e['days'] as List? ?? [];
+      final recentRaw = e['recent'] as List? ?? [];
+
+      final iconMap = {
+        'receipt': Icons.receipt_long_outlined,
+        'local_pizza': Icons.local_pizza_outlined,
+        'outdoor_grill': Icons.outdoor_grill_outlined,
+      };
+
+      setState(() {
+        _netEarnings = (e['netEarnings'] as num?)?.toDouble() ?? 0;
+        _changePercent = (e['changePercent'] as num?)?.toDouble() ?? 0;
+        _orderCount = (e['orderCount'] as num?)?.toInt() ?? 0;
+        _totalRevenue = (e['totalRevenue'] as num?)?.toDouble() ?? 0;
+        _appFee = (e['appFee'] as num?)?.toDouble() ?? 0;
+        _days = daysRaw.map((d) => DailyActivity(
+          dayLabel: d['dayLabel'] as String? ?? '',
+          percent: (d['percent'] as num?)?.toDouble() ?? 0,
+          highlighted: d['highlighted'] == true,
+        )).toList();
+        _recent = recentRaw.map((r) => RecentEarningEntry(
+          orderId: r['orderId'] as String? ?? '',
+          icon: iconMap[r['icon'] as String?] ?? Icons.receipt_long_outlined,
+          timeLabel: r['timeLabel'] as String? ?? '',
+          amount: (r['amount'] as num?)?.toDouble() ?? 0,
+        )).toList();
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() { _error = 'Failed to load earnings'; _loading = false; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final positive = _changePercent >= 0;
+
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: GestureDetector(
+          onTap: _load,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_error!, style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 8),
+              Text('Tap to retry', style: TextStyle(color: AppColors.textMutedOf(brightness))),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final breakdown = [
+      EarningsBreakdownItem(
+          icon: Icons.payments_outlined, label: 'Total Revenue', amount: _totalRevenue),
+      EarningsBreakdownItem(
+          icon: Icons.info_outline, label: 'Platform Fee (10%)', amount: _appFee, isNegative: true),
+      EarningsBreakdownItem(
+          icon: Icons.account_balance_wallet_outlined, label: 'Net Earnings', amount: _netEarnings),
+    ];
 
     return SafeArea(
       top: false,
@@ -57,11 +117,11 @@ class EarningsInsightsScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.screenPadding, vertical: AppSpacing.md),
         children: [
-          Text('Weekly Earnings',
+          Text('Earnings',
               style: AppTextStyles.headlineLg
                   .copyWith(color: AppColors.textOf(brightness))),
           const SizedBox(height: 2),
-          Text('Oct 23 - Oct 29, 2023',
+          Text('$_orderCount completed orders',
               style: AppTextStyles.bodyMd
                   .copyWith(color: AppColors.textMutedOf(brightness))),
           const SizedBox(height: AppSpacing.lg),
@@ -72,24 +132,25 @@ class EarningsInsightsScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'TOTAL BALANCE',
-                      style: AppTextStyles.overline
-                          .copyWith(color: AppColors.textMutedOf(brightness)),
-                    ),
+                    Text('NET EARNINGS',
+                        style: AppTextStyles.overline
+                            .copyWith(color: AppColors.textMutedOf(brightness))),
                     Row(
                       children: [
-                        const Icon(Icons.trending_up_rounded,
-                            size: 16, color: AppColors.success),
-                        Text('+12.4%',
+                        Icon(
+                          positive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                          size: 16,
+                          color: positive ? AppColors.success : AppColors.ember,
+                        ),
+                        Text('${positive ? '+' : ''}${_changePercent.toStringAsFixed(1)}%',
                             style: AppTextStyles.labelLg
-                                .copyWith(color: AppColors.success)),
+                                .copyWith(color: positive ? AppColors.success : AppColors.ember)),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('\$2,840.50',
+                Text('EGP ${_netEarnings.toStringAsFixed(2)}',
                     style: AppTextStyles.displayLg
                         .copyWith(color: AppColors.amber)),
                 const SizedBox(height: AppSpacing.sm),
@@ -106,7 +167,7 @@ class EarningsInsightsScreen extends StatelessWidget {
                     style: AppTextStyles.titleLg
                         .copyWith(color: AppColors.textOf(brightness))),
                 const SizedBox(height: AppSpacing.sm),
-                const WeeklyActivityChart(days: _days),
+                WeeklyActivityChart(days: _days),
               ],
             ),
           ),
@@ -119,36 +180,10 @@ class EarningsInsightsScreen extends StatelessWidget {
                     style: AppTextStyles.titleLg
                         .copyWith(color: AppColors.textOf(brightness))),
                 const SizedBox(height: AppSpacing.xs),
-                for (int i = 0; i < _breakdown.length; i++)
-                  BreakdownRow(
-                      item: _breakdown[i],
-                      showDivider: i != _breakdown.length - 1),
+                for (int i = 0; i < breakdown.length; i++)
+                  BreakdownRow(item: breakdown[i], showDivider: i != breakdown.length - 1),
               ],
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: const [
-              Expanded(
-                child: EarningsStatCard(
-                  icon: Icons.timer_outlined,
-                  value: '12.4m',
-                  label: 'Avg Prep Time',
-                  badgeLabel: 'Excellent',
-                  badgeTone: PillTone.success,
-                ),
-              ),
-              SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: EarningsStatCard(
-                  icon: Icons.verified_outlined,
-                  value: '99.2%',
-                  label: 'Accuracy Rate',
-                  badgeLabel: 'Top 5%',
-                  badgeTone: PillTone.warning,
-                ),
-              ),
-            ],
           ),
           const SizedBox(height: AppSpacing.sm),
           Row(
@@ -157,18 +192,17 @@ class EarningsInsightsScreen extends StatelessWidget {
               Text('Recent Earnings',
                   style: AppTextStyles.titleLg
                       .copyWith(color: AppColors.textOf(brightness))),
-              Text('View All',
-                  style:
-                      AppTextStyles.labelLg.copyWith(color: AppColors.amber)),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
           SectionCard(
-            child: Column(
-              children: [
-                for (final entry in _recent) RecentEarningTile(entry: entry),
-              ],
-            ),
+            child: _recent.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    child: Text('No completed orders yet',
+                        style: AppTextStyles.bodyMd.copyWith(color: AppColors.textMutedOf(brightness))),
+                  )
+                : Column(children: [for (final entry in _recent) RecentEarningTile(entry: entry)]),
           ),
         ],
       ),

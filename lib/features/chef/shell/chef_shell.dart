@@ -6,6 +6,7 @@ import '../widgets/chef_bottom_nav.dart';
 import '../dashboard/screens/partner_dashboard_screen.dart';
 import '../menu_submission/screens/menu_management_screen.dart';
 import '../earnings/screens/earnings_insights_screen.dart';
+import '../profile/screens/chef_profile_screen.dart';
 import '../auth/screens/partner_verification_screen.dart';
 
 class ChefShell extends StatefulWidget {
@@ -20,11 +21,11 @@ class ChefShell extends StatefulWidget {
 class _ChefShellState extends State<ChefShell> {
   late int _currentIndex = widget.initialIndex;
 
-  static const List<Widget> _tabs = [
-    PartnerDashboardScreen(),
-    MenuManagementScreen(),
-    EarningsInsightsScreen(),
-    PartnerVerificationScreen(),
+  List<Widget> get _tabs => [
+    const PartnerDashboardScreen(),
+    const MenuManagementScreen(),
+    const EarningsInsightsScreen(),
+    _verified ? const ChefProfileScreen() : const PartnerVerificationScreen(),
   ];
 
   static const List<String> _titles = [
@@ -45,32 +46,21 @@ class _ChefShellState extends State<ChefShell> {
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
 
-    if (!_verified) {
-      return Scaffold(
-        backgroundColor: AppColors.surfaceSunkenOf(brightness),
-        appBar: ChefTopBar(
-          title: 'Complete Verification',
-          showNotificationBell: false,
-        ),
-        body: PartnerVerificationScreen(),
-        bottomNavigationBar: ChefBottomNav(
-          currentIndex: 3,
-          onTap: _onNavTap,
-          lockedIndices: const {0, 1, 2},
-        ),
-      );
-    }
+    final List<Widget> tabs = _tabs;
 
     return Scaffold(
       backgroundColor: AppColors.surfaceSunkenOf(brightness),
       appBar: ChefTopBar(
-        title: _titles[_currentIndex],
-        showNotificationBell: _currentIndex == 0,
+        title: _verified ? _titles[_currentIndex] : 'Complete Verification',
+        showNotificationBell: _currentIndex == 0 && _verified,
       ),
-      body: IndexedStack(index: _currentIndex, children: _tabs),
+      body: _verified
+          ? IndexedStack(index: _currentIndex, children: tabs)
+          : const PartnerVerificationScreen(),
       bottomNavigationBar: ChefBottomNav(
-        currentIndex: _currentIndex,
+        currentIndex: _verified ? _currentIndex : 3,
         onTap: _onNavTap,
+        lockedIndices: _verified ? const {} : const {0, 1, 2},
       ),
     );
   }

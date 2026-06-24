@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:savora_app/core/network/savora_api.dart';
 import 'package:savora_app/core/routing/routes.dart' hide RecipeDetailArgs;
 import 'package:savora_app/core/theme/app_colors.dart';
 import 'package:savora_app/core/theme/app_spacing.dart';
@@ -22,35 +23,7 @@ class OrderPreparationScreen extends StatefulWidget {
 }
 
 class _OrderPreparationScreenState extends State<OrderPreparationScreen> {
-  late List<bool> _checked = List.filled(widget.order.items.length, false);
-
-  /// Minimal local recipe lookup so "View Recipe" has something real to
-  /// open — the chef module has no backend wired up yet, so this stands
-  /// in for a future `MenuRepository.recipeFor(itemId)` call.
-  RecipeModel _recipeFor(String itemName) {
-    return RecipeModel(
-      category: 'Mediterranean Standard',
-      title: itemName,
-      description: 'Prepared to Savora Standard specification.',
-      imageUrl:
-          'https://images.unsplash.com/photo-1544025162-d76694265947?w=800',
-      prepTimeMinutes: 25,
-      servings: 1,
-      ingredients: const [
-        RecipeIngredient(
-            id: '1', label: 'See full recipe card in kitchen binder'),
-      ],
-      steps: const [
-        RecipeStep(
-            order: 1,
-            title: 'Prep',
-            description: 'Follow the standard prep checklist for this dish.'),
-      ],
-      qualityChecks: const [
-        RecipeQualityCheck(label: 'Plating matches reference photo')
-      ],
-    );
-  }
+  late final List<bool> _checked = List.filled(widget.order.items.length, false);
 
   @override
   Widget build(BuildContext context) {
@@ -193,20 +166,25 @@ class _OrderPreparationScreenState extends State<OrderPreparationScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   GestureDetector(
-                                    onTap: () =>
+                                    onTap: () async {
+                                      try {
+                                        // Show loading overlay or just wait
+                                        final res = await SavoraApi.getDishById(order.items[i].id);
+                                        final dishData = res['dish'] ?? res['data'] ?? res;
+                                        final realDish = DishModel.fromJson(dishData);
+
+                                        if (!context.mounted) return;
                                         Navigator.of(context).pushNamed(
-                                      Routes.chefRecipeDetail,
-                                      arguments: RecipeDetailArgs(
-                                        DishModel(
-                                          id: order.items[i].id,
-                                          name: order.items[i].name,
-                                          imageUrl:
-                                              'https://images.unsplash.com/photo-1544025162-d76694265947?w=800',
-                                          recipe:
-                                              _recipeFor(order.items[i].name),
-                                        ),
-                                      ),
-                                    ),
+                                          Routes.chefRecipeDetail,
+                                          arguments: RecipeDetailArgs(realDish),
+                                        );
+                                      } catch (e) {
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Failed to load dish details: $e')),
+                                        );
+                                      }
+                                    },
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -284,7 +262,18 @@ class _OrderPreparationScreenState extends State<OrderPreparationScreen> {
           ChefPrimaryButton(
             label: 'Mark Order as Ready',
             icon: Icons.check_circle_outline_rounded,
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () async {
+              try {
+                await SavoraApi.updateOrderStatus(widget.order.id, 'ready');
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to mark ready: $e')),
+                );
+              }
+            },
           ),
         ],
       ),

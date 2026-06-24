@@ -5,6 +5,8 @@ import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../state/cart_state.dart';
+import '../../../../state/providers/auth_provider.dart';
+import '../../../../shared/widgets/auth_gate.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -13,6 +15,7 @@ const _kAccentDark = Color(0xFFD4952E);
 class ProductDetailScreen extends StatefulWidget {
   const ProductDetailScreen({
     super.key,
+    this.dishId = '',
     this.name = 'Royal Lamb Fattah',
     this.basePrice = 245,
     this.rating = 4.9,
@@ -20,15 +23,18 @@ class ProductDetailScreen extends StatefulWidget {
     this.tagline = 'Cloud Kitchen Special',
     this.description =
         'A classic Egyptian delicacy featuring tender, slow-cooked lamb chunks served over a bed of aromatic garlic-vinegar rice and toasted pita bread.',
-    this.image = 'assets/images/Royal Lamb Fattah.png',
+    this.image = '',
     this.tone = const Color(0xFF8B3A1E),
     this.emoji = '🍛',
+    this.chefId,
+    this.chefName,
   });
 
-  final String name, prepTime, tagline, description, image, emoji;
+  final String dishId, name, prepTime, tagline, description, image, emoji;
   final int basePrice;
   final double rating;
   final Color tone;
+  final String? chefId, chefName;
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -39,7 +45,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   late final AnimationController _entrance;
   int _quantity = 1;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
   final List<_AddOn> _addOns = [
     _AddOn('Extra Garlic Dip', 15),
@@ -88,6 +94,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   void _changeQty(int delta) {
     HapticFeedback.selectionClick();
     setState(() => _quantity = (_quantity + delta).clamp(1, 99));
+  }
+
+  Widget _heroFallback() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          colors: [widget.tone, widget.tone.withValues(alpha: 0.6)],
+        ),
+      ),
+      child: Center(child: Text(widget.emoji, style: const TextStyle(fontSize: 80))),
+    );
   }
 
   Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
@@ -178,26 +196,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   }
 
   Widget _buildHero() {
+    final hasNetworkImage = widget.image.startsWith('http');
     return SizedBox(
       height: 300,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            widget.image,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [widget.tone, widget.tone.withValues(alpha: 0.6)],
-                ),
-              ),
-              child: Center(child: Text(widget.emoji, style: const TextStyle(fontSize: 80))),
+          if (hasNetworkImage)
+            Image.network(widget.image, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _heroFallback())
+          else
+            Image.asset(
+              widget.image.isNotEmpty ? widget.image : 'assets/images/Royal Lamb Fattah.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _heroFallback(),
             ),
-          ),
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -547,19 +560,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         top: false,
         child: GestureDetector(
           onTap: () {
+            if (!authState.isLoggedIn) {
+              HapticFeedback.mediumImpact();
+              showAuthRequiredDialog(context);
+              return;
+            }
             HapticFeedback.mediumImpact();
-            final addOnSum = _addOns
-                .where((a) => a.selected)
-                .fold(0, (sum, a) => sum + a.price);
+            final selectedAddOns = _addOns.where((a) => a.selected).toList();
+            final addOnSum = selectedAddOns.fold(0, (sum, a) => sum + a.price);
             final itemPrice = widget.basePrice + addOnSum;
+
+            if (widget.chefId != null) {
+              cartState.setChef(id: widget.chefId!, name: widget.chefName ?? 'Chef');
+            }
 
             cartState.addItem(
               CartItem(
+                dishId: widget.dishId,
                 name: widget.name,
                 price: itemPrice,
                 qty: _quantity,
                 tone: widget.tone,
                 emoji: widget.emoji,
+                addOns: selectedAddOns
+                    .map((a) => CartAddOn(name: a.name, price: a.price))
+                    .toList(),
+                image: widget.image.startsWith('http') ? widget.image : null,
               ),
             );
 

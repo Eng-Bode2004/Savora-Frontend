@@ -1,9 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/network/savora_api.dart';
+import '../../../../state/providers/auth_provider.dart';
+import '../../../customer/auth/screens/splash_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -21,11 +25,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   late final AnimationController _entrance;
 
   bool _notifications = true;
+  bool _isLoading = true;
+  late bool _isDarkMode;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
-
-  static const _userName = 'Ahmed Hassan';
-  static const _userEmail = 'ahmed.hassan@example.com';
+  String _userName = '';
+  String _userEmail = '';
+  String? _userAvatar;
+  String? _profileId;
 
   static const List<_Lang> _languages = [
     _Lang('en', 'English', '🇬🇧'),
@@ -38,16 +44,170 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
+    _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
     _entrance = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..forward();
+    themeModeNotifier.addListener(_onThemeChange);
+    _loadProfile();
   }
 
   @override
   void dispose() {
     _entrance.dispose();
+    themeModeNotifier.removeListener(_onThemeChange);
     super.dispose();
+  }
+
+  void _onThemeChange() {
+    if (mounted) {
+      setState(() => _isDarkMode = themeModeNotifier.value == ThemeMode.dark);
+    }
+  }
+
+  Future<void> _loadProfile() async {
+    final authId = authState.userId;
+    if (authId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+    try {
+      final res = await SavoraApi.getCustomerProfileByAuthId(authId);
+      final profile = res['response'] as Map<String, dynamic>? ?? res;
+      _userName = profile['name'] as String? ?? '';
+      _userEmail = profile['email'] as String? ?? '';
+      _userAvatar = profile['avatar'] as String?;
+      _profileId = profile['_id'] as String? ?? profile['id'] as String?;
+    } catch (_) {}
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    try {
+      final uploaded = await SavoraApi.uploadCustomerProfileImage(bytes, picked.name);
+      final imageUrl = uploaded['url'] as String?;
+      if (imageUrl != null && _profileId != null) {
+        await SavoraApi.updateCustomerProfile(profileId: _profileId!, data: {'avatar': imageUrl});
+        setState(() => _userAvatar = imageUrl);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _editName() async {
+    final controller = TextEditingController(text: _userName);
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _subTextColor.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Icon(Icons.edit_rounded, color: _kAccent, size: 22),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Edit Name',
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: _textColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                style: TextStyle(color: _textColor, fontFamily: 'DM Sans'),
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  labelStyle: TextStyle(color: _subTextColor, fontFamily: 'DM Sans'),
+                  filled: true,
+                  fillColor: _fieldBgColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancel', style: TextStyle(fontFamily: 'DM Sans', color: _subTextColor)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final newName = controller.text.trim();
+                        if (newName.isEmpty || _profileId == null) return;
+                        try {
+                          await SavoraApi.updateCustomerProfile(profileId: _profileId!, data: {'name': newName});
+                          setState(() => _userName = newName);
+                        } catch (_) {}
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kAccent,
+                        foregroundColor: const Color(0xFF2C1810),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Save', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showComingSoon(String feature) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(feature, style: const TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w700)),
+        content: Text('$feature is coming soon!', style: TextStyle(fontFamily: 'DM Sans', color: _subTextColor)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600, color: _kAccent)),
+          ),
+        ],
+      ),
+    );
   }
 
   double _t(double start, double end) {
@@ -99,6 +259,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  void _logout() {
+    HapticFeedback.mediumImpact();
+    authState.logout();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const SplashScreen()),
+      (_) => false,
+    );
+  }
+
   Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
   Color get _bgColor2 => _isDarkMode ? AppColors.espresso : const Color(0xFFF7F4EE);
   Color get _textColor => _isDarkMode ? AppColors.cream : const Color(0xFF1A1410);
@@ -114,6 +283,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final isRtl = l.locale.languageCode == 'ar';
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: _bgColor,
+        body: Center(child: CircularProgressIndicator(color: _kAccent)),
+      );
+    }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: _isDarkMode ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
@@ -253,36 +429,35 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ],
               ),
               child: ClipOval(
-                child: Image.asset(
-                  'assets/images/avatar.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: _fieldBgColor,
-                    child: Icon(Icons.person_rounded, size: 44, color: _subTextColor),
-                  ),
-                ),
+                child: _userAvatar != null
+                    ? Image.network(_userAvatar!, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _avatarPlaceholder())
+                    : _avatarPlaceholder(),
               ),
             ),
             Positioned(
               right: 2,
               bottom: 2,
-              child: Container(
-                width: 26,
-                height: 26,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_kAccentLight, _kAccentDark]),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: _bgColor, width: 2),
+              child: GestureDetector(
+                onTap: _pickAndUploadAvatar,
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [_kAccentLight, _kAccentDark]),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: _bgColor, width: 2),
+                  ),
+                  child: const Icon(Icons.edit_rounded, size: 12, color: Color(0xFF2C1810)),
                 ),
-                child: const Icon(Icons.edit_rounded, size: 12, color: Color(0xFF2C1810)),
               ),
             ),
           ],
         ),
         const SizedBox(height: 14),
         Text(
-          _userName,
+          _userName.isEmpty ? 'User' : _userName,
           style: TextStyle(
             fontFamily: 'DM Sans',
             fontSize: 19,
@@ -292,7 +467,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
         const SizedBox(height: 3),
         Text(
-          _userEmail,
+          _userEmail.isEmpty ? (authState.email ?? '') : _userEmail,
           style: TextStyle(
             fontFamily: 'DM Sans',
             fontSize: 13,
@@ -300,6 +475,13 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _avatarPlaceholder() {
+    return Container(
+      color: _fieldBgColor,
+      child: Icon(Icons.person_rounded, size: 44, color: _subTextColor),
     );
   }
 
@@ -342,11 +524,11 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildAccountSection() {
     return _card([
-      _tile(Icons.person_outline_rounded, 'Edit Profile', onTap: () {}),
+      _tile(Icons.person_outline_rounded, 'Edit Profile', onTap: _editName),
       _divider(),
-      _tile(Icons.location_on_outlined, 'Saved Addresses', onTap: () {}),
+      _tile(Icons.location_on_outlined, 'Saved Addresses', onTap: () => _showComingSoon('Saved Addresses')),
       _divider(),
-      _tile(Icons.credit_card_rounded, 'Payment Methods', onTap: () {}),
+      _tile(Icons.credit_card_rounded, 'Payment Methods', onTap: () => _showComingSoon('Payment Methods')),
     ]);
   }
 
@@ -465,10 +647,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildLogoutButton() {
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.mediumImpact();
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      },
+      onTap: _logout,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 15),
@@ -503,7 +682,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildVersion() {
     return Center(
       child: Text(
-        'Savora v1.0.0 · Made with ♥ in Cairo',
+        'Savora v1.0.0 \u00B7 Made with \u2665 in Cairo',
         style: TextStyle(
           fontFamily: 'DM Sans',
           fontSize: 11,

@@ -38,6 +38,64 @@ class DishModel {
       recipe: recipe ?? this.recipe,
     );
   }
+
+  factory DishModel.fromJson(Map<String, dynamic> json) {
+    final name = json['name'] ?? json['english_name'] ?? '';
+    final imageUrl = json['imageUrl'] ?? json['image'] ?? 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400';
+
+    RecipeModel makeFallbackRecipe() {
+      final ingredients = (json['ingredients'] as List<dynamic>?)
+              ?.map((i) => RecipeIngredient(id: '', label: i.toString()))
+              .toList() ??
+          (json['english_ingredients'] as List<dynamic>?)
+              ?.map((i) => RecipeIngredient(id: '', label: i.toString()))
+              .toList() ??
+          [];
+
+      final steps = (json['steps'] as List<dynamic>?)
+              ?.map((s) {
+                final m = s is Map ? s as Map<String, dynamic> : <String, dynamic>{};
+                return RecipeStep(
+                  order: (m['order'] as num?)?.toInt() ?? 1,
+                  title: (m['title'] ?? m['step'] ?? '').toString(),
+                  description: (m['description'] ?? m['instruction'] ?? '').toString(),
+                );
+              })
+              .toList() ??
+          (json['english_Recipe_steps'] as List<dynamic>?)
+              ?.asMap()
+              .entries
+              .map((e) => RecipeStep(
+                    order: e.key + 1,
+                    title: 'Step ${e.key + 1}',
+                    description: e.value.toString(),
+                  ))
+              .toList() ??
+          [];
+
+      return RecipeModel(
+        category: json['category']?.toString() ?? 'Main',
+        title: name,
+        description: json['description'] ?? json['english_description'] ?? 'Delicious dish',
+        imageUrl: imageUrl,
+        prepTimeMinutes: (json['prepTimeMinutes'] ?? json['prep_time'] ?? 20) is int
+            ? json['prepTimeMinutes'] ?? json['prep_time'] ?? 20
+            : 20,
+        servings: (json['servings'] ?? 1) is int ? json['servings'] ?? 1 : 1,
+        ingredients: ingredients,
+        steps: steps,
+        qualityChecks: [],
+      );
+    }
+
+    return DishModel(
+      id: json['_id'] ?? json['id'] ?? '',
+      name: name,
+      imageUrl: imageUrl,
+      inStock: true,
+      recipe: json['recipe'] != null ? RecipeModel.fromJson(json['recipe']) : makeFallbackRecipe(),
+    );
+  }
 }
 
 // ── Recipe sub-models ──
@@ -64,6 +122,20 @@ class RecipeModel {
   final List<RecipeIngredient> ingredients;
   final List<RecipeStep> steps;
   final List<RecipeQualityCheck> qualityChecks;
+
+  factory RecipeModel.fromJson(Map<String, dynamic> json) {
+    return RecipeModel(
+      category: json['category'] ?? 'Main',
+      title: json['title'] ?? json['name'] ?? '',
+      description: json['description'] ?? '',
+      imageUrl: json['imageUrl'] ?? json['image'] ?? 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400',
+      prepTimeMinutes: json['prepTimeMinutes'] ?? 20,
+      servings: json['servings'] ?? 1,
+      ingredients: (json['ingredients'] as List<dynamic>? ?? []).map((i) => RecipeIngredient(id: '', label: i.toString())).toList(),
+      steps: (json['steps'] as List<dynamic>? ?? []).map((s) => RecipeStep(order: 1, title: 'Step', description: s.toString())).toList(),
+      qualityChecks: [],
+    );
+  }
 }
 
 class RecipeIngredient {

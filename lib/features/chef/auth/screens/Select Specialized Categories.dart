@@ -6,7 +6,8 @@ import 'package:savora_app/features/chef/auth/screens/verification_theme.dart';
 enum _View { categories, subcategories, dishes }
 
 class SelectSpecializedCategories extends StatefulWidget {
-  const SelectSpecializedCategories({super.key});
+  final bool fromManagement;
+  const SelectSpecializedCategories({super.key, this.fromManagement = false});
 
   @override
   State<SelectSpecializedCategories> createState() =>
@@ -157,7 +158,9 @@ class _SelectSpecializedCategoriesState
         await SavoraApi.setPreferredDish(chiefId: profileId, dishId: dishId, preferred: true);
       }
 
-      await SavoraApi.verifyStep(profileId: profileId, step: 'Items_Can_Make_Status', status: 'verified');
+      if (!widget.fromManagement) {
+        await SavoraApi.verifyStep(profileId: profileId, step: 'Items_Can_Make_Status', status: 'verified');
+      }
 
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {

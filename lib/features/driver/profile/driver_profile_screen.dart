@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:savora_app/features/customer/auth/screens/login_screen.dart';
 import 'package:savora_app/core/theme/theme_notifier.dart';
 import 'package:savora_app/core/localization/app_localizations.dart';
+import 'package:savora_app/core/network/savora_api.dart';
+import 'package:savora_app/state/providers/auth_provider.dart';
+import 'package:savora_app/features/driver/providers/driver_state.dart';
 
 class _Lang {
   const _Lang(this.code, this.label, this.flag);
@@ -24,6 +27,15 @@ class DriverProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final theme = Theme.of(context);
+    final driverState = ref.watch(driverUserProvider);
+    final profile = authState.profileData;
+    final driverName = authState.name ?? profile?['name'] as String? ?? 'Driver';
+    final driverRating = (profile?['rating'] as num?)?.toDouble();
+    final driverImage = profile?['profile_image'] as String?;
+    final vehicleInfo = profile?['vehicle_info'] as String?;
+    final vehiclePlate = profile?['vehicle_plate'] as String?;
+    final payoutMethod = profile?['payout_method'] as String?;
+    final isOnline = driverState.isOnline;
 
     return ListenableBuilder(
       listenable: localeProvider,
@@ -36,7 +48,6 @@ class DriverProfileScreen extends ConsumerWidget {
         return Scaffold(
       backgroundColor: cs.surface,
 
-      // 🔥 Cleaner AppBar (premium feel)
       appBar: AppBar(
         title: const Text('Profile'),
         centerTitle: true,
@@ -64,17 +75,18 @@ class DriverProfileScreen extends ConsumerWidget {
                 CircleAvatar(
                   radius: 44,
                   backgroundColor: cs.primary.withOpacity(0.12),
-                  child: Icon(
-                    Icons.person,
-                    size: 44,
-                    color: cs.primary,
-                  ),
+                  backgroundImage: driverImage != null
+                      ? NetworkImage(driverImage) as ImageProvider
+                      : null,
+                  child: driverImage == null
+                      ? Icon(Icons.person, size: 44, color: cs.primary)
+                      : null,
                 ),
 
                 const SizedBox(height: 14),
 
                 Text(
-                  'John Doe',
+                  driverName,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -83,9 +95,9 @@ class DriverProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 6),
 
                 Text(
-                  'Driver • Active',
+                  isOnline ? 'Driver • Online' : 'Driver • Offline',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
+                    color: isOnline ? cs.primary : cs.onSurfaceVariant,
                   ),
                 ),
 
@@ -106,7 +118,7 @@ class DriverProfileScreen extends ConsumerWidget {
                           color: cs.primary, size: 18),
                       const SizedBox(width: 6),
                       Text(
-                        '4.9',
+                        driverRating?.toStringAsFixed(1) ?? '—',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -121,6 +133,30 @@ class DriverProfileScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+
+                // Online toggle
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      foregroundColor: isOnline ? cs.error : cs.primary,
+                      side: BorderSide(
+                        color: isOnline ? cs.error.withOpacity(0.5) : cs.primary.withOpacity(0.5),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => ref.read(driverUserProvider.notifier).toggleOnline(),
+                    icon: Icon(isOnline ? Icons.power_settings_new_rounded : Icons.play_arrow_rounded),
+                    label: Text(
+                      isOnline ? 'Go Offline' : 'Go Online',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -130,16 +166,18 @@ class DriverProfileScreen extends ConsumerWidget {
           _SectionHeader(title: 'Account'),
 
           _SectionCard(children: [
-            const _ProfileMenuItem(
+            _ProfileMenuItem(
               icon: Icons.directions_car_outlined,
               title: 'Vehicle Information',
-              subtitle: 'Toyota Prius • ABC-1234',
+              subtitle: vehicleInfo != null
+                  ? vehiclePlate != null ? '$vehicleInfo • $vehiclePlate' : vehicleInfo
+                  : 'Not set',
             ),
             Divider(color: cs.outline.withOpacity(0.2)),
-           const _ProfileMenuItem(
+           _ProfileMenuItem(
               icon: Icons.credit_card_outlined,
               title: 'Payout Methods',
-              subtitle: 'Bank account connected',
+              subtitle: payoutMethod ?? 'Not set',
             ),
             Divider(color: cs.outline.withOpacity(0.2)),
            const _ProfileMenuItem(
@@ -202,6 +240,7 @@ class DriverProfileScreen extends ConsumerWidget {
                 ),
               ),
               onPressed: () {
+                authState.logout();
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
@@ -269,7 +308,6 @@ class _ThemeToggleTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    // Uses the main project's themeModeNotifier for consistency
     final isLight = themeModeNotifier.value == ThemeMode.light;
 
     return SwitchListTile(
@@ -344,7 +382,6 @@ class _ProfileMenuItem extends StatelessWidget {
 
 void _showLanguageBottomSheet(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
 
   showModalBottomSheet(
     context: context,
@@ -354,7 +391,6 @@ void _showLanguageBottomSheet(BuildContext context) {
     builder: (_) => _LanguageSheet(
       languages: _languages,
       current: localeProvider.locale.languageCode,
-      isDark: isDark,
       onSelect: (code) {
         localeProvider.setLocale(Locale(code));
         Navigator.of(context).pop();
@@ -367,19 +403,18 @@ class _LanguageSheet extends StatelessWidget {
   const _LanguageSheet({
     required this.languages,
     required this.current,
-    required this.isDark,
     required this.onSelect,
   });
 
   final List<_Lang> languages;
   final String current;
-  final bool isDark;
   final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(

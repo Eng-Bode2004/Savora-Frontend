@@ -5,6 +5,9 @@ import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../state/cart_state.dart';
+import '../../../../state/providers/auth_provider.dart';
+import '../../../../shared/widgets/auth_gate.dart';
+import '../../checkout/screens/checkout_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -23,7 +26,7 @@ class _CartScreenState extends State<CartScreen>
 
   static const int _deliveryFee = 20;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
   @override
   void initState() {
@@ -70,7 +73,12 @@ class _CartScreenState extends State<CartScreen>
 
   void _changeQty(CartItem item, int delta) {
     HapticFeedback.selectionClick();
-    cartState.changeQty(item.name, delta);
+    cartState.changeQty(item.dishId, delta);
+  }
+
+  void _removeItem(CartItem item) {
+    HapticFeedback.mediumImpact();
+    cartState.removeItem(item.dishId);
   }
 
   Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
@@ -236,17 +244,36 @@ class _CartScreenState extends State<CartScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'DM Sans',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: _textColor,
-                    height: 1.2,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'DM Sans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: _textColor,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _removeItem(item),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.close_rounded, size: 16, color: Colors.red),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -479,7 +506,21 @@ class _CartScreenState extends State<CartScreen>
         ],
       ),
       child: GestureDetector(
-        onTap: () => HapticFeedback.mediumImpact(),
+        onTap: () {
+          if (!authState.isLoggedIn) {
+            HapticFeedback.mediumImpact();
+            showAuthRequiredDialog(context);
+            return;
+          }
+          HapticFeedback.mediumImpact();
+          Navigator.of(context).push(
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => const CheckoutScreen(),
+              transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
+              transitionDuration: const Duration(milliseconds: 350),
+            ),
+          );
+        },
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),

@@ -17,6 +17,7 @@ class SavoraApi {
   static const String userBase    = 'https://savorauser-services-production.up.railway.app/api/v1/users';
   static const String roleBase    = 'https://savorarole-services-production.up.railway.app/api/v1/roles';
   static const String chiefBase   = 'https://savora-chiefprofileservices-production.up.railway.app/api/v2/chief-profile';
+  static const String driverBase  = 'https://savoradriverprofile-services-production.up.railway.app/api/v2/driver-profile';
   static const String dishBase    = 'https://savoradish-services-production.up.railway.app/api/v1/dishes';
   static const String prefChiefBase = 'https://savoradishprefered-services-production.up.railway.app/api/v1/preferred-dishes-chief';
   static const String categoryBase = 'https://savora-categoryservices-production.up.railway.app/api/v1/categories';
@@ -26,6 +27,7 @@ class SavoraApi {
   static const String imagesBase  = 'https://savora-imageservices-production.up.railway.app/api/v2/images';
   static const String addressBase = 'https://savoraaddress-services-production.up.railway.app/api/v1/address';
   static const String nationalIdBase = 'https://savoranationalid-services-production.up.railway.app/api/v2/national-id';
+  static const String azBase = 'https://savora-availabilityzoneservices-production.up.railway.app/api/v1/az';
 
   static const Duration _timeout = Duration(seconds: 30);
 
@@ -168,6 +170,38 @@ class SavoraApi {
     throw Exception(_extractError(data));
   }
 
+  // ── Phone Login (OTP) ─────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> findOrCreateByPhone(String phone) async {
+    final res = await _post('$userBase/find-or-create-by-phone', headers: _headers, body: jsonEncode({'phone': phone}));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> phoneLogin(String userId) async {
+    final res = await _post('$userBase/phone-login', headers: _headers, body: jsonEncode({'userId': userId}));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Forgot / Reset Password ───────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> forgotPassword(String identifier) async {
+    final res = await _post('$userBase/forgot-password', headers: _headers, body: jsonEncode({'identifier': identifier}));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> resetPassword(String userId, String newPassword) async {
+    final res = await _post('$userBase/reset-password', headers: _headers, body: jsonEncode({'userId': userId, 'newPassword': newPassword}));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
   // ── Roles ─────────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getRoleById(String id) async {
@@ -265,6 +299,117 @@ class SavoraApi {
     throw Exception(_extractError(data));
   }
 
+  static Future<Map<String, dynamic>> updateChiefProfile(
+      String id, Map<String, dynamic> data) async {
+    final res = await _put('$chiefBase/$id',
+        headers: _authHeaders, body: jsonEncode(data));
+    final result = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return result;
+    throw Exception(_extractError(result));
+  }
+
+  static Future<Map<String, dynamic>> uploadChiefProfileImage(
+      List<int> bytes, String filename) async {
+    return _uploadBytes('$imagesBase/chief-profile-image', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> uploadCustomerProfileImage(
+      List<int> bytes, String filename) async {
+    return _uploadBytes('$imagesBase/customer-profile-image', bytes, filename);
+  }
+
+  // ── Driver Profile ─────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> createDriverProfile(String name) async {
+    final res = await _post(driverBase, headers: _headers, body: jsonEncode({'name': name}));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 201) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> getDriverProfile(String id) async {
+    final res = await _get('$driverBase/$id', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> updateDriverProfile(String id, Map<String, dynamic> data) async {
+    final res = await _put('$driverBase/$id', headers: _authHeaders, body: jsonEncode(data));
+    final result = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return result;
+    throw Exception(_extractError(result));
+  }
+
+  static Future<Map<String, dynamic>> verifyDriverStep(String id, String step, String status) async {
+    final res = await _patch('$driverBase/$id/verify-step', headers: _authHeaders, body: jsonEncode({
+      'step': step,
+      'status': status,
+    }));
+    final result = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return result;
+    throw Exception(_extractError(result));
+  }
+
+  static Future<Map<String, dynamic>> uploadDriverVehicleImage(List<int> bytes, String filename) {
+    return _uploadBytes('$imagesBase/driver-vehicle-image', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> uploadDriverIdFront(List<int> bytes, String filename) {
+    return _uploadBytes('$imagesBase/driver-id-front', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> uploadDriverIdBack(List<int> bytes, String filename) {
+    return _uploadBytes('$imagesBase/driver-id-back', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> uploadDriverLicenseFront(List<int> bytes, String filename) {
+    return _uploadBytes('$imagesBase/driver-license-front', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> uploadDriverLicenseBack(List<int> bytes, String filename) {
+    return _uploadBytes('$imagesBase/driver-license-back', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> uploadDriverVehicleLicense(List<int> bytes, String filename) {
+    return _uploadBytes('$imagesBase/driver-vehicle-license', bytes, filename);
+  }
+
+  // ── Driver Orders ───────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getAvailableOrdersForDriver() async {
+    final res = await _get('$chiefBase/order/available/driver', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> acceptOrderDriver(String orderId, String driverId) async {
+    final res = await _patch('$chiefBase/order/$orderId/driver-accept', headers: _authHeaders, body: jsonEncode({
+      'driver_id': driverId,
+    }));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> deliverOrderDriver(String orderId) async {
+    final res = await _patch('$chiefBase/order/$orderId/driver-deliver', headers: _authHeaders, body: jsonEncode({}));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> submitOrderRating(String orderId, {required int rating, int? driverRating, String? comment}) async {
+    final body = <String, dynamic>{'rating': rating};
+    if (driverRating != null) body['driver_rating'] = driverRating;
+    if (comment != null) body['comment'] = comment;
+    final res = await _post('$chiefBase/order/$orderId/rate', headers: _authHeaders, body: jsonEncode(body));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
   // ── Customer Profile ─────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getCustomerProfileByAuthId(String authId) async {
@@ -297,21 +442,34 @@ class SavoraApi {
   // ── Payment Providers ────────────────────────────────────────────────
 
   static Future<List<Map<String, dynamic>>> getActivePaymentProviders() async {
+    const fallbackKeys = {
+      'Vodafone Cash': '0100 000 0000',
+      'Orange Cash': '0120 000 0000',
+      'Etisalat Cash': '0110 000 0000',
+      'Bank Transfer': 'EGP 1234 5678 9012 3456 7890',
+    };
     try {
       final res = await _get('$paymentProviderBase/active', headers: _headers);
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         final list = data['data'];
-        if (list is List) return list.cast<Map<String, dynamic>>();
+        if (list is List) {
+          final providers = list.cast<Map<String, dynamic>>();
+          for (final p in providers) {
+            final name = (p['name'] as String?) ?? (p['Provider'] as String?) ?? '';
+            p.putIfAbsent('key', () => fallbackKeys[name] ?? '');
+          }
+          return providers;
+        }
         return [];
       }
       throw Exception(_extractError(jsonDecode(res.body)));
     } catch (_) {
       return [
-        {'name': 'Vodafone Cash', 'Provider': 'Vodafone Cash'},
-        {'name': 'Orange Cash', 'Provider': 'Orange Cash'},
-        {'name': 'Etisalat Cash', 'Provider': 'Etisalat Cash'},
-        {'name': 'Bank Transfer', 'Provider': 'Bank Transfer'},
+        {'name': 'Vodafone Cash', 'Provider': 'Vodafone Cash', 'key': fallbackKeys['Vodafone Cash']},
+        {'name': 'Orange Cash', 'Provider': 'Orange Cash', 'key': fallbackKeys['Orange Cash']},
+        {'name': 'Etisalat Cash', 'Provider': 'Etisalat Cash', 'key': fallbackKeys['Etisalat Cash']},
+        {'name': 'Bank Transfer', 'Provider': 'Bank Transfer', 'key': fallbackKeys['Bank Transfer']},
       ];
     }
   }
@@ -327,6 +485,23 @@ class SavoraApi {
       throw Exception(_extractError(data));
     } catch (_) {
       throw Exception('Address service returned ${res.statusCode}: ${raw.length > 200 ? raw.substring(0, 200) : raw}');
+    }
+  }
+
+  // ── Delivery Fee & Zones ─────────────────────────────────────────────
+
+  /// Returns average delivery fee from zone stats
+  static Future<double> getAverageDeliveryFee() async {
+    try {
+      final res = await _get('$azBase/stats/overview', headers: _headers);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final fee = (data['avgBaseFee'] as num?)?.toDouble() ?? 20.0;
+        return fee;
+      }
+      return 20.0;
+    } catch (_) {
+      return 20.0;
     }
   }
 
@@ -529,6 +704,81 @@ class SavoraApi {
     throw Exception(_extractError(data));
   }
 
+  // ── Orders ───────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> uploadPaymentImage(List<int> bytes, String filename) async {
+    return _uploadBytes('$imagesBase/payment-image', bytes, filename);
+  }
+
+  static Future<Map<String, dynamic>> createOrder(Map<String, dynamic> orderData) async {
+    final res = await _post('$chiefBase/order', headers: _authHeaders, body: jsonEncode(orderData));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 201) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> getChefOrders(String chefId) async {
+    final res = await _get('$chiefBase/order/chef/$chefId', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> getCustomerOrders(String customerId) async {
+    final res = await _get('$chiefBase/order/customer/$customerId', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> getOrderById(String orderId) async {
+    final res = await _get('$chiefBase/order/$orderId', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> verifyPayment(String orderId, String status) async {
+    final res = await _patch('$chiefBase/order/$orderId/payment-verify', headers: _authHeaders, body: jsonEncode({'status': status}));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> acceptOrder(String orderId) async {
+    final res = await _patch('$chiefBase/order/$orderId/accept', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<Map<String, dynamic>> updateOrderStatus(String orderId, String orderStatus) async {
+    final res = await _patch('$chiefBase/order/$orderId/status', headers: _authHeaders, body: jsonEncode({'order_status': orderStatus}));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  static Future<List<dynamic>> getPendingPayments() async {
+    final res = await _get('$chiefBase/admin/pending-payments', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) {
+      final list = data['orders'];
+      if (list is List) return list;
+      return [];
+    }
+    throw Exception(_extractError(data));
+  }
+
+  // ── Daily Availability ───────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getAvailabilityByChiefAndDate(String chiefId, String date) async {
+    final res = await _get('$prefChiefBase/availability/chief/$chiefId/date/$date', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
   // ── Preferred Dishes Chief ───────────────────────────────────────────—
 
   static Future<Map<String, dynamic>> setPreferredDish({
@@ -565,8 +815,52 @@ class SavoraApi {
     throw Exception(_extractError(data));
   }
 
+  static Future<Map<String, dynamic>> removePreferredDish({
+    required String chiefId,
+    required String dishId,
+  }) async {
+    final res = await _delete('$prefChiefBase/preferred/$chiefId/$dishId', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
   static Future<Map<String, dynamic>> getDashboard(String date) async {
     final res = await _get('$prefChiefBase/dashboard/$date', headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Best Chef Assignment ─────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> findBestChef({
+    required List<Map<String, dynamic>> items,
+    required String date,
+  }) async {
+    final res = await _post('$prefChiefBase/best-chef', headers: _headers, body: jsonEncode({
+      'items': items, 'date': date,
+    }));
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Chef Earnings ────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getChefEarnings(String chefId) async {
+    final res = await _get('$chiefBase/order/chef/$chefId/earnings', headers: _authHeaders);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode == 200) return data;
+    throw Exception(_extractError(data));
+  }
+
+  // ── Kitchen Status ───────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> setKitchenStatus(String profileId, bool open) async {
+    final res = await _patch('$chiefBase/$profileId/kitchen-status',
+        headers: _authHeaders,
+        body: jsonEncode({'kitchen_open': open}));
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode == 200) return data;
     throw Exception(_extractError(data));

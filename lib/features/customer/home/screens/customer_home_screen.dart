@@ -9,6 +9,8 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../notifications/screens/notifications_screen.dart';
 import '../../planner/screens/group_meal_planner_screen.dart';
 import '../../menu/screens/dish_detail_screen.dart';
+import '../../menu/screens/category_screen.dart';
+import '../../menu/services/menu_service.dart';
 import '../../auth/screens/customer_verification_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
@@ -25,9 +27,12 @@ class CustomerHomeScreen extends StatefulWidget {
 class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     with TickerProviderStateMixin {
   late final AnimationController _entrance;
-  int _categoryIndex = 0;
+  List<MenuItem> _menuCategories = [];
+  List<MenuItem> _recommendedDishes = [];
+  List<MenuItem> _popularDishes = [];
+  bool _loadingMenu = true;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
   bool _isVerified = authState.profileData?['Is_Verified'] == true;
   bool _loadingProfile = false;
 
@@ -35,6 +40,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _loadProfileIfNeeded();
+    _loadMenuData();
   }
 
   Future<void> _loadProfileIfNeeded() async {
@@ -66,28 +72,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     }
   }
 
-  // ── data ──
-  static const List<_Category> _categories = [
-    _Category('Mahshi', Icons.local_fire_department_rounded),
-    _Category('Koshary', Icons.ramen_dining_rounded),
-    _Category('Grills', Icons.outdoor_grill_rounded),
-    _Category('Desserts', Icons.cake_rounded),
-    _Category('Drinks', Icons.local_cafe_rounded),
-  ];
-
-  static const List<_Special> _specials = [
-    _Special('Royal Lamb Fattah',
-        'Slow-cooked lamb with garlic-vinegar rice', 'EGP 245', 4.9, Color(0xFF8B3A1E)),
-    _Special('Signature Koshary',
-        'Lentils, rice, pasta, crispy onions', 'EGP 95', 4.8, Color(0xFFC25A2E)),
-  ];
-
-  static const List<_Dish> _popular = [
-    _Dish('Cairo Grills', 4.5, '25–35 min', 'EGP 15.00', Color(0xFF6B3410)),
-    _Dish('Green Nile Bowl', 4.6, '20–30 min', 'free', Color(0xFF3E6B4A)),
-    _Dish("Grandma's Om Ali", 4.7, '15–25 min', 'EGP 10.00', Color(0xFF9A5B2A)),
-    _Dish('The Grill Hub', 4.4, '30–40 min', 'EGP 20.00', Color(0xFF7A2E1E)),
-  ];
+  Future<void> _loadMenuData() async {
+    if (!_loadingMenu) return;
+    try {
+      await MenuService.loadLanguage();
+      final cats = await MenuService.getCategories();
+      final recommended = await MenuService.getRecommendedDishes();
+      final popular = await MenuService.getPopularDishes();
+      if (mounted) {
+        setState(() {
+          _menuCategories = cats;
+          _recommendedDishes = recommended;
+          _popularDishes = popular;
+          _loadingMenu = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingMenu = false);
+    }
+  }
 
   @override
   void initState() {
@@ -168,7 +171,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                                 ] else
                                   const SizedBox(height: 24),
                                 _reveal(0.10, 0.40,
-                                    _buildSectionHeader('Categories', 'View all')),
+                                    _buildSectionHeader('Categories', 'View all', onAction: () {
+                                      Navigator.of(context).push(
+                                        PageRouteBuilder(
+                                          pageBuilder: (_, __, ___) => const CategoryScreen(),
+                                          transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
+                                          transitionDuration: const Duration(milliseconds: 350),
+                                        ),
+                                      );
+                                    })),
                                 const SizedBox(height: 14),
                                 _reveal(0.15, 0.50, _buildCategories()),
                                 const SizedBox(height: 22),
@@ -176,7 +187,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                                 const SizedBox(height: 26),
                                 _reveal(0.30, 0.60,
                                     _buildSectionHeader("Chef's Specials", null,
-                                        subtitle: 'Handpicked Egyptian delicacies')),
+                                        subtitle: 'Recommended for you')),
                                 const SizedBox(height: 14),
                               ],
                             ),
@@ -440,7 +451,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   }
 
   // ════════ SECTION HEADER ════════
-  Widget _buildSectionHeader(String title, String? action, {String? subtitle}) {
+  Widget _buildSectionHeader(String title, String? action, {String? subtitle, VoidCallback? onAction}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -472,13 +483,16 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
           ),
         ),
         if (action != null)
-          Text(
-            action,
-            style: const TextStyle(
-              fontFamily: 'DM Sans',
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: _kAccent,
+          GestureDetector(
+            onTap: onAction,
+            child: Text(
+              action,
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _kAccent,
+              ),
             ),
           ),
       ],
@@ -487,61 +501,67 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
 
   // ════════ CATEGORIES ════════
   Widget _buildCategories() {
+    if (_loadingMenu) {
+      return SizedBox(
+        height: 84,
+        child: Center(child: CircularProgressIndicator(color: _kAccent.withValues(alpha: 0.5))),
+      );
+    }
     return SizedBox(
-      height: 84,
+      height: 100,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
-        itemCount: _categories.length,
+        itemCount: _menuCategories.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, i) {
-          final c = _categories[i];
-          final selected = i == _categoryIndex;
+          final c = _menuCategories[i];
+          final hasImage = c.image != null && c.image!.isNotEmpty;
           return GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
-              setState(() => _categoryIndex = i);
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 72,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                gradient: selected
-                    ? const LinearGradient(colors: [_kAccentLight, _kAccentDark])
-                    : null,
-                color: selected ? null : _cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: selected ? Colors.transparent : _fieldBorderColor,
-                  width: 0.5,
+              Navigator.of(context).push(
+                PageRouteBuilder(
+                  pageBuilder: (_, __, ___) => const CategoryScreen(),
+                  transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
+                  transitionDuration: const Duration(milliseconds: 350),
                 ),
+              );
+            },
+            child: Container(
+              width: 82,
+              decoration: BoxDecoration(
+                color: _cardColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _fieldBorderColor, width: 0.5),
                 boxShadow: [
-                  BoxShadow(
-                    color: selected ? _kAccent.withValues(alpha: 0.3) : _shadowColor,
-                    blurRadius: selected ? 14 : 8,
-                    offset: const Offset(0, 4),
-                  ),
+                  BoxShadow(color: _shadowColor, blurRadius: 8, offset: const Offset(0, 4)),
                 ],
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Icon(
-                    c.icon,
-                    size: 24,
-                    color: selected ? const Color(0xFF2C1810) : _kAccent,
+                  if (hasImage)
+                    Image.network(c.image!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _catIconFallback())
+                  else
+                    _catIconFallback(),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black.withValues(alpha: 0.65)],
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    c.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: selected ? const Color(0xFF2C1810) : _textColor,
+                  Positioned(
+                    left: 6, right: 6, bottom: 6,
+                    child: Text(
+                      c.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontFamily: 'DM Sans', fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
                     ),
                   ),
                 ],
@@ -550,6 +570,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
           );
         },
       ),
+    );
+  }
+
+  Widget _catIconFallback() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_kAccentLight.withValues(alpha: 0.3), _kAccentDark.withValues(alpha: 0.2)]),
+      ),
+      child: const Center(child: Icon(Icons.restaurant_menu_rounded, size: 28, color: _kAccent)),
     );
   }
 
@@ -709,33 +738,44 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     );
   }
 
-  // ════════ CHEF'S SPECIALS ════════
+  // ════════ CHEF'S SPECIALS / RECOMMENDED ════════
   Widget _buildSpecialsCarousel() {
+    if (_loadingMenu) {
+      return const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator(color: _kAccent)),
+      );
+    }
+    if (_recommendedDishes.isEmpty) return const SizedBox.shrink();
     return SizedBox(
       height: 200,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _specials.length,
+        itemCount: _recommendedDishes.length,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, i) => _buildSpecialCard(_specials[i]),
+        itemBuilder: (context, i) => _buildRecommendedCard(_recommendedDishes[i]),
       ),
     );
   }
 
-  Widget _buildSpecialCard(_Special s) {
+  Widget _buildRecommendedCard(MenuItem dish) {
+    final hasImage = dish.image != null && dish.image!.isNotEmpty;
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
         Navigator.of(context).push(
           PageRouteBuilder(
             pageBuilder: (_, __, ___) => ProductDetailScreen(
-              name: s.name,
-              description: s.desc,
-              basePrice: int.tryParse(s.price.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
-              rating: s.rating,
-              tone: s.tone,
+              dishId: dish.id,
+              name: dish.name,
+              description: dish.description ?? 'Recommended dish just for you.',
+              basePrice: (dish.price ?? 0).toInt(),
+              rating: dish.rating ?? 0,
+              image: dish.image ?? '',
+              tone: _kAccent,
+              chefId: dish.chefId,
             ),
             transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
             transitionDuration: const Duration(milliseconds: 350),
@@ -743,152 +783,115 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
         );
       },
       child: Container(
-      width: 290,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: _shadowColor,
-            blurRadius: 20,
-            spreadRadius: -4,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/images/${s.name}.png',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+        width: 280,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(color: _shadowColor, blurRadius: 20, spreadRadius: -4, offset: const Offset(0, 10)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (hasImage)
+                Image.network(dish.image!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _recPlaceholder())
+              else
+                _recPlaceholder(),
+              Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [s.tone, s.tone.withValues(alpha: 0.7)],
+                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.15), Colors.black.withValues(alpha: 0.78)],
+                    stops: const [0.0, 0.45, 1.0],
                   ),
                 ),
-                child: const Center(child: Text('🍛', style: TextStyle(fontSize: 56))),
               ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withValues(alpha: 0.15),
-                    Colors.black.withValues(alpha: 0.78),
-                  ],
-                  stops: const [0.0, 0.45, 1.0],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star_rounded, size: 14, color: _kAccent),
-                    const SizedBox(width: 3),
-                    Text(
-                      s.rating.toString(),
-                      style: const TextStyle(
-                        fontFamily: 'DM Sans',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 14,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    s.name,
-                    style: const TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
+              Positioned(
+                top: 12, right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    s.desc,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 11.5,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      const Icon(Icons.star_rounded, size: 14, color: _kAccent),
+                      const SizedBox(width: 3),
                       Text(
-                        s.price,
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: _kAccentLight,
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => HapticFeedback.mediumImpact(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                                colors: [_kAccentLight, _kAccentDark]),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'Add to Cart',
-                            style: TextStyle(
-                              fontFamily: 'DM Sans',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF2C1810),
-                            ),
-                          ),
-                        ),
+                        (dish.rating ?? 0).toStringAsFixed(1),
+                        style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+              Positioned(
+                left: 16, right: 16, bottom: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(dish.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontFamily: 'DM Sans', fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white)),
+                    const SizedBox(height: 2),
+                    if (dish.description != null)
+                      Text(dish.description!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontFamily: 'DM Sans', fontSize: 11.5, color: Colors.white.withValues(alpha: 0.85))),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        if (dish.price != null)
+                          Text('EGP ${dish.price!.toInt()}',
+                            style: const TextStyle(fontFamily: 'DM Sans', fontSize: 15, fontWeight: FontWeight.w700, color: _kAccentLight)),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => HapticFeedback.mediumImpact(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [_kAccentLight, _kAccentDark]),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text('Add to Cart',
+                              style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2C1810))),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _recPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_kAccentLight.withValues(alpha: 0.4), _kAccentDark.withValues(alpha: 0.3)]),
       ),
+      child: const Center(child: Icon(Icons.restaurant_rounded, size: 56, color: _kAccent)),
     );
   }
 
   // ════════ POPULAR GRID ════════
   Widget _buildPopularGrid() {
+    if (_loadingMenu) {
+      return SliverToBoxAdapter(
+        child: Container(
+          height: 200,
+          alignment: Alignment.center,
+          child: const CircularProgressIndicator(color: _kAccent),
+        ),
+      );
+    }
+    if (_popularDishes.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       sliver: SliverGrid(
@@ -902,25 +905,30 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
           (context, i) => _reveal(
             0.50 + i * 0.04,
             0.88 + i * 0.04,
-            _buildDishCard(_popular[i]),
+            _buildPopularCard(_popularDishes[i]),
           ),
-          childCount: _popular.length,
+          childCount: _popularDishes.length,
         ),
       ),
     );
   }
 
-  Widget _buildDishCard(_Dish d) {
+  Widget _buildPopularCard(MenuItem d) {
+    final hasImage = d.image != null && d.image!.isNotEmpty;
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
         Navigator.of(context).push(
           PageRouteBuilder(
             pageBuilder: (_, __, ___) => ProductDetailScreen(
+              dishId: d.id,
               name: d.name,
-              rating: d.rating,
-              prepTime: d.time,
-              tone: d.tone,
+              description: d.description ?? 'Popular dish',
+              basePrice: (d.price ?? 0).toInt(),
+              rating: d.rating ?? 0,
+              image: d.image ?? '',
+              tone: _kAccent,
+              chefId: d.chefId,
             ),
             transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
             transitionDuration: const Duration(milliseconds: 350),
@@ -933,12 +941,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: _fieldBorderColor, width: 0.5),
           boxShadow: [
-            BoxShadow(
-              color: _shadowColor,
-              blurRadius: 16,
-              spreadRadius: -4,
-              offset: const Offset(0, 8),
-            ),
+            BoxShadow(color: _shadowColor, blurRadius: 16, spreadRadius: -4, offset: const Offset(0, 8)),
           ],
         ),
         child: Column(
@@ -950,54 +953,39 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                    child: Image.asset(
-                      'assets/images/${d.name}.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                    child: hasImage
+                        ? Image.network(d.image!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _popPlaceholder())
+                        : _popPlaceholder(),
+                  ),
+                  if (d.rating != null)
+                    Positioned(
+                      left: 8, top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [d.tone, d.tone.withValues(alpha: 0.65)],
-                          ),
+                          color: Colors.black.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Center(
-                            child: Text('🍽️', style: TextStyle(fontSize: 34))),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        d.time,
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded, size: 11, color: _kAccent),
+                            const SizedBox(width: 2),
+                            Text(d.rating!.toStringAsFixed(1),
+                              style: const TextStyle(fontFamily: 'DM Sans', fontSize: 9.5, fontWeight: FontWeight.w600, color: Colors.white)),
+                          ],
                         ),
                       ),
                     ),
-                  ),
                   Positioned(
-                    right: 8,
-                    top: 8,
+                    right: 8, top: 8,
                     child: Container(
-                      width: 26,
-                      height: 26,
+                      width: 26, height: 26,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.9),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.favorite_border_rounded,
-                          size: 15, color: Color(0xFFE0533D)),
+                      child: const Icon(Icons.favorite_border_rounded, size: 15, color: Color(0xFFE0533D)),
                     ),
                   ),
                 ],
@@ -1008,44 +996,23 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    d.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: _textColor,
-                    ),
-                  ),
+                  Text(d.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontFamily: 'DM Sans', fontSize: 14, fontWeight: FontWeight.w700, color: _textColor)),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, size: 14, color: _kAccent),
-                      const SizedBox(width: 3),
-                      Text(
-                        d.rating.toString(),
-                        style: TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _textColor,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
+                      if (d.price != null) ...[
+                        Text('EGP ${d.price!.toInt()}',
+                          style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, fontWeight: FontWeight.w700, color: _kAccentDark)),
+                        const SizedBox(width: 6),
+                      ],
                       Icon(Icons.circle, size: 3, color: _subTextColor),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          d.fee == 'free' ? 'Free delivery' : '${d.fee} delivery',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: 'DM Sans',
-                            fontSize: 11,
-                            color: _subTextColor,
-                          ),
+                          d.rating != null ? '${d.rating!.toStringAsFixed(1)} ★' : '',
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontFamily: 'DM Sans', fontSize: 11, color: _subTextColor),
                         ),
                       ),
                     ],
@@ -1058,27 +1025,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
       ),
     );
   }
+
+  Widget _popPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_kAccentLight.withValues(alpha: 0.3), _kAccentDark.withValues(alpha: 0.2)]),
+      ),
+      child: const Center(child: Icon(Icons.restaurant_rounded, size: 30, color: _kAccent)),
+    );
+  }
 }
 
-// ════════════════════════════════════════════════════════
-// DATA MODELS
-// ════════════════════════════════════════════════════════
-class _Category {
-  const _Category(this.name, this.icon);
-  final String name;
-  final IconData icon;
-}
 
-class _Special {
-  const _Special(this.name, this.desc, this.price, this.rating, this.tone);
-  final String name, desc, price;
-  final double rating;
-  final Color tone;
-}
-
-class _Dish {
-  const _Dish(this.name, this.rating, this.time, this.fee, this.tone);
-  final String name, time, fee;
-  final double rating;
-  final Color tone;
-}

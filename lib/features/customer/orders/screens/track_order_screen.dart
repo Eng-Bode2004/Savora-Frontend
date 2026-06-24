@@ -22,7 +22,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen>
   late final AnimationController _pulse;
   late final AnimationController _dash;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
   static const _activeStep = 2; // 0 Placed, 1 Preparing, 2 On way, 3 Delivered
   static const _captainName = 'Ahmed K.';

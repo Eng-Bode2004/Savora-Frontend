@@ -28,7 +28,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   late final AnimationController _float;
   late final AnimationController _shimmer;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
   String? _roleError;
 
   // Roles fetched from API, keyed by English key (Customer, Chef, Delivery)
@@ -152,6 +152,15 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
           authState.setProfileId(profileId);
           if (profile != null) authState.setProfileData(profile);
         }
+      } else if (spec.roleKey == 'Delivery' && authState.name != null && authState.name!.trim().isNotEmpty) {
+        final profileResult = await SavoraApi.createDriverProfile(authState.name!.trim());
+        final profile = profileResult['profile'] as Map<String, dynamic>?;
+        final profileId = profile?['_id'] as String?;
+        if (profileId != null) {
+          await SavoraApi.assignProfile(userId: userId, profileId: profileId);
+          authState.setProfileId(profileId);
+          if (profile != null) authState.setProfileData(profile);
+        }
       } else if (spec.roleKey == 'Customer') {
         try {
           final profileResult = await SavoraApi.createCustomerProfile({
@@ -229,8 +238,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   void _toggleDarkMode() {
     HapticFeedback.lightImpact();
     setState(() {
-      _isDarkMode = !_isDarkMode;
-      themeModeNotifier.value = _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+      themeModeNotifier.value = _isDarkMode ? ThemeMode.light : ThemeMode.dark;
     });
   }
 

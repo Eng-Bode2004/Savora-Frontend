@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:savora_app/core/network/savora_api.dart';
 import 'package:savora_app/core/routing/routes.dart' hide OrderPreparationArgs;
 import 'package:savora_app/core/theme/app_colors.dart';
 import 'package:savora_app/core/theme/app_spacing.dart';
 import 'package:savora_app/core/theme/app_text_styles.dart';
 import 'package:savora_app/data/models/order_model.dart';
+import 'package:savora_app/state/providers/auth_provider.dart';
 
 import '../../widgets/chef_ui_kit.dart';
 import '../widgets/dashboard_widgets.dart';
@@ -20,57 +22,114 @@ class PartnerDashboardScreen extends StatefulWidget {
 
 class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
   bool _kitchenOpen = true;
-  OrderModel? _incomingOrder = const OrderModel(
-    id: '4102',
-    customerName: 'Walk-in',
-    items: [
-      OrderItem(id: '1', name: 'Gourmet Truffle Burger', quantity: 2),
-      OrderItem(id: '2', name: 'Fries', quantity: 1),
-    ],
-    total: 345.00,
-    status: OrderStatus.incoming,
-    fulfillmentType: FulfillmentType.delivery,
-    distanceKm: 2.4,
-    remainingSeconds: 162,
-    totalPrepSeconds: 180,
-  );
+  OrderModel? _incomingOrder;
+  int _totalOrders = 0;
+  bool _loading = true;
 
-  Timer? _countdown;
+  double _totalEarnings = 0;
+  double _changePercent = 0;
+  int _completedCount = 0;
+  String? _chefId;
 
   @override
   void initState() {
     super.initState();
-    _countdown = Timer.periodic(const Duration(seconds: 1), (_) {
-      final order = _incomingOrder;
-      if (order == null || order.remainingSeconds == null) return;
-      if (order.remainingSeconds! <= 0) {
-        setState(() => _incomingOrder = null);
-        return;
-      }
-      setState(() {
-        _incomingOrder =
-            order.copyWith(remainingSeconds: order.remainingSeconds! - 1);
-      });
-    });
+    _chefId = authState.profileId;
+    if (_chefId != null) _load();
   }
 
-  @override
-  void dispose() {
-    _countdown?.cancel();
-    super.dispose();
+  Future<void> _load() async {
+    final chefId = _chefId;
+    if (chefId == null) return;
+    await Future.wait([_loadIncomingOrder(), _loadEarnings(), _loadKitchenStatus()]);
+  }
+
+  Future<void> _loadKitchenStatus() async {
+    final chefId = _chefId;
+    if (chefId == null) return;
+    try {
+      final data = await SavoraApi.getChiefProfile(chefId);
+      final profile = data['profile'] as Map<String, dynamic>? ?? data as Map<String, dynamic>? ?? {};
+      if (mounted) setState(() {
+        _kitchenOpen = profile['kitchen_open'] != false;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _loadIncomingOrder() async {
+    final chefId = _chefId;
+    if (chefId == null) return;
+    try {
+      final data = await SavoraApi.getChefOrders(chefId);
+      final orders = List<Map<String, dynamic>>.from(data['orders'] ?? []);
+      _totalOrders = orders.length;
+      final incoming = orders.firstWhere(
+        (o) => (o['order_status'] as String?) == 'pending' || (o['order_status'] as String?) == 'accepted',
+        orElse: () => <String, dynamic>{},
+      );
+      if (incoming.isNotEmpty) {
+        final items = List<Map<String, dynamic>>.from(incoming['items'] ?? []);
+        setState(() {
+          _incomingOrder = OrderModel(
+            id: (incoming['_id'] as String?) ?? '',
+            customerName: (incoming['customer_id'] as String?) ?? 'Customer',
+            items: items.asMap().entries.map((e) {
+              final i = e.value;
+              return OrderItem(
+                id: (i['dish_id'] as String?) ?? '${e.key}',
+                name: (i['name'] as String?) ?? '',
+                quantity: (i['qty'] as num?)?.toInt() ?? 1,
+              );
+            }).toList(),
+            total: ((incoming['total'] as num?)?.toDouble() ?? 0),
+            status: OrderStatus.incoming,
+            fulfillmentType: FulfillmentType.delivery,
+          );
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (_) {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadEarnings() async {
+    final chefId = _chefId;
+    if (chefId == null) return;
+    try {
+      final data = await SavoraApi.getChefEarnings(chefId);
+      final e = data['earnings'] as Map<String, dynamic>? ?? {};
+      if (mounted) setState(() {
+        _totalEarnings = (e['netEarnings'] as num?)?.toDouble() ?? 0;
+        _changePercent = (e['changePercent'] as num?)?.toDouble() ?? 0;
+        _completedCount = (e['orderCount'] as num?)?.toInt() ?? 0;
+      });
+    } catch (_) {}
   }
 
   void _acceptOrder() {
     final order = _incomingOrder;
     if (order == null) return;
-    Navigator.of(context)
-        .pushNamed(
-      Routes.chefOrderPreparation,
-      arguments:
-          OrderPreparationArgs(order.copyWith(status: OrderStatus.preparing)),
-    )
-        .then((_) {
-      if (mounted) setState(() => _incomingOrder = null);
+    SavoraApi.acceptOrder(order.id).then((_) {
+      Navigator.of(context)
+          .pushNamed(
+        Routes.chefOrderPreparation,
+        arguments: OrderPreparationArgs(order.copyWith(status: OrderStatus.preparing)),
+      )
+          .then((_) {
+        if (mounted) {
+          setState(() => _incomingOrder = null);
+          _loadIncomingOrder();
+        }
+      });
+    }).catchError((e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to accept: $e')),
+        );
+      }
     });
   }
 
@@ -121,29 +180,29 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            const KitchenOverviewCard(
-              totalEarnings: 'EGP 4,250.00',
-              changePercent: 12,
-              caption: 'from 18 completed orders today',
+            KitchenOverviewCard(
+              totalEarnings: 'EGP ${_totalEarnings.toStringAsFixed(2)}',
+              changePercent: _changePercent,
+              caption: 'from $_completedCount completed orders',
             ),
             const SizedBox(height: AppSpacing.sm),
             Row(
-              children: const [
+              children: [
                 Expanded(
                   child: StatMiniCard(
                     icon: Icons.receipt_long_rounded,
                     iconColor: AppColors.gold,
-                    value: '24',
+                    value: _loading ? '--' : '$_totalOrders',
                     label: 'Total Orders',
                   ),
                 ),
-                SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: StatMiniCard(
                     icon: Icons.timer_outlined,
                     iconColor: AppColors.terracotta,
-                    value: '6.5h',
-                    label: 'Active Hours',
+                    value: _loading ? '--' : (_incomingOrder != null ? 'Active' : 'Idle'),
+                    label: 'Status',
                   ),
                 ),
               ],
@@ -164,7 +223,13 @@ class _PartnerDashboardScreenState extends State<PartnerDashboardScreen> {
             ],
             KitchenStatusToggle(
               isOpen: _kitchenOpen,
-              onChanged: (v) => setState(() => _kitchenOpen = v),
+              onChanged: (v) async {
+                setState(() => _kitchenOpen = v);
+                final id = _chefId;
+                if (id != null) {
+                  await SavoraApi.setKitchenStatus(id, v).catchError((_) {});
+                }
+              },
             ),
           ],
         ),

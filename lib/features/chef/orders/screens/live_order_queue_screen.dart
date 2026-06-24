@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:savora_app/core/network/savora_api.dart';
 import 'package:savora_app/core/routing/routes.dart' hide OrderPreparationArgs;
 import 'package:savora_app/core/theme/app_colors.dart';
 import 'package:savora_app/core/theme/app_spacing.dart';
 import 'package:savora_app/core/theme/app_text_styles.dart';
 import 'package:savora_app/data/models/order_model.dart';
+import 'package:savora_app/state/providers/auth_provider.dart';
 
 import '../../widgets/chef_top_bar.dart';
 import '../widgets/order_widgets.dart';
@@ -19,103 +21,102 @@ class LiveOrderQueueScreen extends StatefulWidget {
 
 class _LiveOrderQueueScreenState extends State<LiveOrderQueueScreen> {
   bool _showHistory = false;
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _orders = [];
 
-  List<OrderModel> _orders = [
-    OrderModel(
-      id: '4092',
-      customerName: 'David Miller',
-      items: const [
-        OrderItem(id: '1', name: 'Margherita Pizza', quantity: 2),
-        OrderItem(id: '2', name: 'Garlic Knots', quantity: 1),
-      ],
-      total: 34.50,
-      status: OrderStatus.incoming,
-      fulfillmentType: FulfillmentType.delivery,
-      targetPrepTime: 'As Soon As Possible',
-    ),
-    OrderModel(
-      id: '4093',
-      customerName: 'Olivia Bennett',
-      items: const [
-        OrderItem(id: '1', name: 'Truffle Risotto', quantity: 1),
-        OrderItem(id: '2', name: 'House Salad', quantity: 1),
-      ],
-      total: 42.00,
-      status: OrderStatus.incoming,
-      fulfillmentType: FulfillmentType.scheduled,
-      targetPrepTime: 'Scheduled 12:45 PM',
-    ),
-    OrderModel(
-      id: '4088',
-      customerName: 'Liam Carter',
-      items: const [
-        OrderItem(id: '1', name: 'Pan-Seared Salmon, Asparagus', quantity: 1)
-      ],
-      total: 38.00,
-      status: OrderStatus.preparing,
-      fulfillmentType: FulfillmentType.delivery,
-      remainingSeconds: 518,
-      totalPrepSeconds: 900,
-      customerNote: 'Extra lemon on the side please.',
-    ),
-    OrderModel(
-      id: '4085',
-      customerName: 'Sophia Reyes',
-      items: const [
-        OrderItem(id: '1', name: 'Beef Wellington (Individual)', quantity: 1)
-      ],
-      total: 52.00,
-      status: OrderStatus.preparing,
-      fulfillmentType: FulfillmentType.pickup,
-      remainingSeconds: 11,
-      totalPrepSeconds: 600,
-    ),
-    OrderModel(
-      id: '4080',
-      customerName: 'Sarah',
-      items: const [
-        OrderItem(id: '1', name: 'Chicken Alfredo Pasta', quantity: 1)
-      ],
-      total: 28.00,
-      status: OrderStatus.completed,
-      fulfillmentType: FulfillmentType.delivery,
-      pickedUpBy: 'Sarah',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadOrders();
+  }
 
-  void _accept(OrderModel order) {
-    setState(() {
-      _orders = [
-        for (final o in _orders)
-          if (o.id == order.id)
-            o
-                .copyWith(status: OrderStatus.preparing, remainingSeconds: 900)
-                .copyWith()
-          else
-            o,
-      ];
-    });
-    final updated = _orders.firstWhere((o) => o.id == order.id);
-    Navigator.of(context).pushNamed(
-      Routes.chefOrderPreparation,
-      arguments: OrderPreparationArgs(updated),
+  Future<void> _loadOrders() async {
+    final chefId = authState.profileId;
+    if (chefId == null) return;
+    setState(() => _loading = true);
+    try {
+      final data = await SavoraApi.getChefOrders(chefId);
+      setState(() {
+        _orders = List<Map<String, dynamic>>.from(data['orders'] ?? []);
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  /// Map API order_status to OrderStatus enum
+  OrderStatus _mapStatus(String? status) {
+    switch (status) {
+      case 'accepted':
+      case 'preparing':
+        return OrderStatus.preparing;
+      case 'ready':
+        return OrderStatus.readyForPickup;
+      case 'completed':
+        return OrderStatus.completed;
+      default:
+        return OrderStatus.incoming;
+    }
+  }
+
+  OrderModel _mapOrder(Map<String, dynamic> order) {
+    final items = List<Map<String, dynamic>>.from(order['items'] ?? []);
+    return OrderModel(
+      id: (order['_id'] as String?) ?? '',
+      customerName: (order['customer_id'] as String?) ?? 'Customer',
+      items: items.asMap().entries.map((e) {
+        final i = e.value;
+        return OrderItem(
+          id: (i['dish_id'] as String?) ?? '${e.key}',
+          name: (i['name'] as String?) ?? '',
+          quantity: (i['qty'] as num?)?.toInt() ?? 1,
+        );
+      }).toList(),
+      total: ((order['total'] as num?)?.toDouble() ?? 0),
+      status: _mapStatus(order['order_status'] as String?),
+      fulfillmentType: FulfillmentType.delivery,
     );
   }
 
-  void _decline(OrderModel order) {
-    setState(() => _orders = _orders.where((o) => o.id != order.id).toList());
+  Future<void> _accept(OrderModel order) async {
+    try {
+      await SavoraApi.acceptOrder(order.id);
+      _loadOrders();
+      Navigator.of(context).pushNamed(
+        Routes.chefOrderPreparation,
+        arguments: OrderPreparationArgs(order),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to accept: $e')),
+        );
+      }
+    }
   }
 
-  void _markReady(OrderModel order) {
-    setState(() {
-      _orders = [
-        for (final o in _orders)
-          if (o.id == order.id)
-            o.copyWith(status: OrderStatus.readyForPickup)
-          else
-            o,
-      ];
-    });
+  void _decline(OrderModel order) {
+    // No decline API; just remove from local list
+    setState(() => _orders.removeWhere((o) => o['_id'] == order.id));
+  }
+
+  Future<void> _markReady(OrderModel order) async {
+    try {
+      await SavoraApi.updateOrderStatus(order.id, 'ready');
+      _loadOrders();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update: $e')),
+        );
+      }
+    }
   }
 
   void _openDetail(OrderModel order) {
@@ -128,11 +129,12 @@ class _LiveOrderQueueScreenState extends State<LiveOrderQueueScreen> {
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
+    final models = _orders.map(_mapOrder).toList();
     final incoming =
-        _orders.where((o) => o.status == OrderStatus.incoming).toList();
+        models.where((o) => o.status == OrderStatus.incoming).toList();
     final preparing =
-        _orders.where((o) => o.status == OrderStatus.preparing).toList();
-    final ready = _orders
+        models.where((o) => o.status == OrderStatus.preparing).toList();
+    final ready = models
         .where((o) =>
             o.status == OrderStatus.readyForPickup ||
             o.status == OrderStatus.completed)
@@ -148,7 +150,26 @@ class _LiveOrderQueueScreenState extends State<LiveOrderQueueScreen> {
             onChanged: (v) => setState(() => _showHistory = v),
           ),
           Expanded(
-            child: _showHistory
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(
+                        child: GestureDetector(
+                          onTap: _loadOrders,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Failed to load orders'),
+                              const SizedBox(height: 8),
+                              Text('Tap to retry',
+                                  style: TextStyle(
+                                      color: AppColors.textMutedOf(
+                                          brightness))),
+                            ],
+                          ),
+                        ),
+                      )
+                    : _showHistory
                 ? Center(
                     child: Text(
                       'No order history yet',

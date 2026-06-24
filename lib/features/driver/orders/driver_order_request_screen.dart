@@ -146,46 +146,180 @@ class DriverOrderRequestScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
-          // ================= DELIVERY TIMELINE =================
+          // ================= CHEF DETAILS =================
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: cs.surfaceContainer,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: cs.outline.withOpacity(0.2)),
+              border: Border.all(color: cs.primary.withOpacity(0.3)),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _TimelinePoint(
-                  icon: Icons.storefront,
-                  title: 'PICKUP',
-                  name: order.pickupName,
-                  address: order.pickupAddress,
-                  color: cs.primary,
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.only(left: 14),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 2,
-                        height: 28,
-                        color: cs.primary.withOpacity(0.3),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      child: Icon(Icons.storefront, color: cs.primary, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('CHEF / PICKUP',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.bold,
+                            color: cs.onSurfaceVariant)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: cs.primary.withOpacity(0.12),
+                      backgroundImage: order.chefImage.isNotEmpty
+                          ? NetworkImage(order.chefImage)
+                          : null,
+                      child: order.chefImage.isEmpty
+                          ? Icon(Icons.person, color: cs.primary)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(order.chefName.isNotEmpty ? order.chefName : order.pickupName,
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          if (order.chefPhone.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(order.chefPhone,
+                                style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (order.chefPhone.isNotEmpty)
+                      IconButton(
+                        icon: Icon(Icons.phone, color: cs.primary),
+                        onPressed: () {},
+                      ),
+                  ],
+                ),
+                if (order.chefAddress.isNotEmpty || order.pickupAddress.isNotEmpty) ...[
+                  const Divider(height: 24),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.location_on, size: 18, color: cs.primary),
                       const SizedBox(width: 8),
-                      Icon(Icons.arrow_downward,
-                          size: 16, color: cs.primary.withOpacity(0.6)),
+                      Expanded(
+                        child: Text(
+                          order.chefAddress.isNotEmpty ? order.chefAddress : order.pickupAddress,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
                     ],
                   ),
-                ),
+                ],
+              ],
+            ),
+          ),
 
-                _TimelinePoint(
-                  icon: Icons.location_on,
-                  title: 'DROP-OFF',
-                  name: null,
-                  address: order.dropoffAddress,
-                  color: cs.secondary,
+          const SizedBox(height: 12),
+
+          // ================= CUSTOMER DETAILS =================
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainer,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: cs.secondary.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: cs.secondary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.person, color: cs.secondary, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('CUSTOMER / DROP-OFF',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.bold,
+                            color: cs.onSurfaceVariant)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: cs.secondary.withOpacity(0.12),
+                      backgroundImage: order.customerAvatar != null
+                          ? NetworkImage(order.customerAvatar!)
+                          : null,
+                      child: order.customerAvatar == null
+                          ? Icon(Icons.person, color: cs.secondary)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(order.customerName,
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          if (order.customerPhone.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(order.customerPhone,
+                                style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (order.customerPhone.isNotEmpty)
+                      IconButton(
+                        icon: Icon(Icons.phone, color: cs.secondary),
+                        onPressed: () {},
+                      ),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.location_on, size: 18, color: cs.secondary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (order.dropoffLabel.isNotEmpty)
+                            Text(order.dropoffLabel,
+                                style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          Text(
+                            order.dropoffAddress,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          if (order.dropoffCity.isNotEmpty)
+                            Text(order.dropoffCity,
+                                style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -307,87 +441,3 @@ class DriverOrderRequestScreen extends ConsumerWidget {
   }
 }
 
-class _StatItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _StatItem(
-      {required this.icon, required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Column(
-      children: [
-        Icon(icon, color: cs.primary),
-        const SizedBox(height: 8),
-        Text(value, style: Theme.of(context).textTheme.titleLarge),
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
-      ],
-    );
-  }
-}
-class _TimelinePoint extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String? name;
-  final String address;
-  final Color color;
-
-  const _TimelinePoint({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.name,
-    required this.address,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, size: 18, color: color),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  letterSpacing: 1.2,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (name != null)
-                Text(
-                  name!,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              Text(
-                address,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}

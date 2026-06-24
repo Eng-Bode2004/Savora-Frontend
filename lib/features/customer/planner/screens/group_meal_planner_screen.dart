@@ -24,7 +24,7 @@ class _GroupMealPlannerScreenState extends State<GroupMealPlannerScreen>
 
   int _people = 4;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
   final List<_Pref> _prefs = [
     _Pref('Vegetarian', Icons.eco_rounded),

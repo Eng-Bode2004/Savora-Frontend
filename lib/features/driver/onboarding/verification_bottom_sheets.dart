@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:savora_app/core/network/savora_api.dart';
+import 'package:savora_app/state/providers/auth_provider.dart';
+import 'driver_location_setup_screen.dart' as savora_driver_location;
 import 'verification_state.dart';
 
 // ── Shared bottom-sheet launcher helper ───────────────────────────────────────
@@ -37,8 +43,20 @@ class _VehicleInfoBottomSheetState
   String? _type;
   final _modelCtrl = TextEditingController();
   final _plateCtrl = TextEditingController();
+  XFile? _vehicleImage;
+  bool _isSaving = false;
 
   static const _types = ['دراجة نارية', 'سيارة', 'دراجة هوائية', 'شاحنة صغيرة'];
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _vehicleImage = pickedFile;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -57,88 +75,156 @@ class _VehicleInfoBottomSheetState
       padding: EdgeInsets.fromLTRB(20, 0, 20, bottom + 24),
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _SheetHeader(
-                title: 'بيانات المركبة', icon: Icons.two_wheeler, cs: cs, tt: tt),
-            const SizedBox(height: 20),
-            Text('نوع المركبة', style: tt.labelLarge),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _type,
-              decoration: _inputDec(cs, 'اختر نوع المركبة'),
-              items: _types
-                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                  .toList(),
-              validator: (v) => v == null ? 'يرجى اختيار نوع المركبة' : null,
-              onChanged: (v) => setState(() => _type = v),
-              dropdownColor: cs.surfaceContainerHighest,
-            ),
-            const SizedBox(height: 16),
-            Text('موديل المركبة', style: tt.labelLarge),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _modelCtrl,
-              textDirection: TextDirection.rtl,
-              decoration: _inputDec(cs, 'مثال: تويوتا كامري 2022'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'يرجى إدخال موديل المركبة' : null,
-            ),
-            const SizedBox(height: 16),
-            Text('رقم اللوحة', style: tt.labelLarge),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _plateCtrl,
-              textDirection: TextDirection.rtl,
-              decoration: _inputDec(cs, 'مثال: أ ب ج 1234'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'يرجى إدخال رقم اللوحة' : null,
-            ),
-            const SizedBox(height: 28),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('إلغاء'),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SheetHeader(
+                  title: 'بيانات المركبة', icon: Icons.two_wheeler, cs: cs, tt: tt),
+              const SizedBox(height: 20),
+              Text('نوع المركبة', style: tt.labelLarge),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _type,
+                decoration: _inputDec(cs, 'اختر نوع المركبة'),
+                items: _types
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
+                validator: (v) => v == null ? 'يرجى اختيار نوع المركبة' : null,
+                onChanged: (v) => setState(() => _type = v),
+                dropdownColor: cs.surfaceContainerHighest,
+              ),
+              const SizedBox(height: 16),
+              Text('موديل المركبة', style: tt.labelLarge),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _modelCtrl,
+                textDirection: TextDirection.rtl,
+                decoration: _inputDec(cs, 'مثال: تويوتا كامري 2022'),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'يرجى إدخال موديل المركبة' : null,
+              ),
+              const SizedBox(height: 16),
+              Text('رقم اللوحة', style: tt.labelLarge),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _plateCtrl,
+                textDirection: TextDirection.rtl,
+                decoration: _inputDec(cs, 'مثال: أ ب ج 1234'),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'يرجى إدخال رقم اللوحة' : null,
+              ),
+              const SizedBox(height: 16),
+              Text('صورة المركبة', style: tt.labelLarge),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: cs.outlineVariant),
                   ),
+                  child: _vehicleImage != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: kIsWeb
+                              ? Image.network(_vehicleImage!.path, fit: BoxFit.cover, width: double.infinity)
+                              : Image.file(File(_vehicleImage!.path), fit: BoxFit.cover, width: double.infinity),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo_outlined, color: cs.primary, size: 32),
+                            const SizedBox(height: 8),
+                            Text('اضغط لإرفاق صورة', style: tt.bodyMedium),
+                          ],
+                        ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton(
-                    onPressed: _save,
-                    child: const Text('حفظ البيانات'),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isSaving ? null : () => Navigator.pop(context),
+                      child: const Text('إلغاء'),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _save,
+                      child: _isSaving
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Text('حفظ البيانات'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    ref
-        .read(verificationProvider.notifier)
-        .completeStep(VerificationStep.vehicle);
-    Navigator.pop(context);
+    if (_vehicleImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إرفاق صورة للمركبة')));
+      return;
+    }
+    
+    setState(() => _isSaving = true);
+    try {
+      final profileId = authState.profileId;
+      if (profileId != null) {
+        final bytes = await _vehicleImage!.readAsBytes();
+        final uploadRes = await SavoraApi.uploadDriverVehicleImage(bytes, _vehicleImage!.path.split('/').last);
+        final imageUrl = uploadRes['data']['URL'];
+
+        await SavoraApi.updateDriverProfile(profileId, {
+          'vehicle': {
+             'type': _type == 'دراجة نارية' ? 'bike' : _type == 'سيارة' ? 'car' : _type == 'شاحنة صغيرة' ? 'van' : 'scooter',
+             'model': _modelCtrl.text,
+             'plate': _plateCtrl.text,
+             'image': imageUrl,
+          }
+        });
+        await SavoraApi.verifyDriverStep(profileId, 'Vehicle_Status', 'verified');
+      }
+
+      ref.read(verificationProvider.notifier).completeStep(VerificationStep.vehicle);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }
 
 // ── 2 · Delivery Zone Bottom Sheet ───────────────────────────────────────────
-class DeliveryZoneBottomSheet extends ConsumerWidget {
+class DeliveryZoneBottomSheet extends ConsumerStatefulWidget {
   const DeliveryZoneBottomSheet({super.key});
 
   static void show(BuildContext context) =>
       _showSheet(context, const DeliveryZoneBottomSheet());
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeliveryZoneBottomSheet> createState() => _DeliveryZoneBottomSheetState();
+}
+
+class _DeliveryZoneBottomSheetState extends ConsumerState<DeliveryZoneBottomSheet> {
+  Map<String, dynamic>? _selectedLocation;
+  bool _isSaving = false;
+
+  @override
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
@@ -154,89 +240,130 @@ class DeliveryZoneBottomSheet extends ConsumerWidget {
               cs: cs,
               tt: tt),
           const SizedBox(height: 16),
-          Container(
-            height: 180,
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: cs.outlineVariant),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CustomPaint(
-                  size: const Size(double.infinity, 180),
-                  painter: _MapGridPainter(cs.outlineVariant.withOpacity(0.3)),
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.map_outlined, size: 48, color: cs.primary),
-                    const SizedBox(height: 8),
-                    Text('خريطة اختيار المنطقة', style: tt.bodyMedium),
-                  ],
-                ),
-                Positioned(
-                  bottom: 12,
-                  right: 12,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                        color: cs.primary,
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.my_location, size: 14, color: cs.onPrimary),
-                      const SizedBox(width: 6),
-                      Text('موقعي الحالي',
-                          style: tt.labelSmall
-                              ?.copyWith(color: cs.onPrimary)),
-                    ]),
+          GestureDetector(
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const savora_driver_location.DriverLocationSetupScreen()),
+              );
+              if (result != null) {
+                setState(() => _selectedLocation = result);
+              }
+            },
+            child: Container(
+              height: 180,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: cs.outlineVariant),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomPaint(
+                    size: const Size(double.infinity, 180),
+                    painter: _MapGridPainter(cs.outlineVariant.withOpacity(0.3)),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cs.primaryContainer.withOpacity(
-                  Theme.of(context).brightness == Brightness.dark ? 0.15 : 0.4),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: cs.primary.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration:
-                      BoxDecoration(color: cs.primary, shape: BoxShape.circle),
-                  child: Icon(Icons.location_on, color: cs.onPrimary, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('المنطقة المختارة', style: tt.labelSmall),
-                      Text('وسط المدينة – المنطقة A', style: tt.bodyLarge),
+                      Icon(Icons.map_outlined, size: 48, color: cs.primary),
+                      const SizedBox(height: 8),
+                      Text('خريطة اختيار المنطقة', style: tt.bodyMedium),
                     ],
                   ),
-                ),
-                TextButton(onPressed: () {}, child: const Text('تغيير')),
-              ],
+                  Positioned(
+                    bottom: 12,
+                    right: 12,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: cs.primary,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.my_location, size: 14, color: cs.onPrimary),
+                        const SizedBox(width: 6),
+                        Text('موقعي الحالي',
+                            style: tt.labelSmall
+                                ?.copyWith(color: cs.onPrimary)),
+                      ]),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+          if (_selectedLocation != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cs.primaryContainer.withOpacity(
+                    Theme.of(context).brightness == Brightness.dark ? 0.15 : 0.4),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cs.primary.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration:
+                        BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+                    child: Icon(Icons.location_on, color: cs.onPrimary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('المنطقة المختارة', style: tt.labelSmall),
+                        Text(_selectedLocation!['addressName'], style: tt.bodyLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(_selectedLocation!['addressDetails'], style: tt.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           ElevatedButton.icon(
             icon: const Icon(Icons.check_circle_outline),
-            label: const Text('تأكيد الموقع'),
-            onPressed: () {
-              ref
-                  .read(verificationProvider.notifier)
-                  .completeStep(VerificationStep.zone);
-              Navigator.pop(context);
+            label: _isSaving 
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('تأكيد الموقع'),
+            onPressed: (_selectedLocation == null || _isSaving) ? null : () async {
+              setState(() => _isSaving = true);
+              try {
+                final profileId = authState.profileId;
+                if (profileId != null) {
+                  final addressRes = await SavoraApi.createAddress({
+                    'street': _selectedLocation!['addressName'],
+                    'city': _selectedLocation!['addressDetails'],
+                    'country': 'Egypt',
+                    'latitude': _selectedLocation!['latitude'],
+                    'longitude': _selectedLocation!['longitude'],
+                    'label': 'Delivery Zone',
+                    'user_id': authState.userId,
+                    'Profile_id': profileId,
+                  });
+                  final addressId = addressRes['_id'] ?? addressRes['id'];
+
+                  // Update driver profile with region
+                  await SavoraApi.updateDriverProfile(profileId, {
+                    'region': _selectedLocation!['addressDetails'],
+                    'address_id': addressId,
+                  });
+                }
+
+                ref.read(verificationProvider.notifier).completeStep(VerificationStep.zone);
+                if (mounted) Navigator.pop(context);
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+              } finally {
+                if (mounted) setState(() => _isSaving = false);
+              }
             },
           ),
         ],
@@ -259,18 +386,31 @@ class IdentityVerificationBottomSheet extends ConsumerStatefulWidget {
 
 class _IdentityVerificationBottomSheetState
     extends ConsumerState<IdentityVerificationBottomSheet> {
-  final Map<String, bool> _uploaded = {
-    'الهوية الوطنية – الوجه الأمامي': false,
-    'الهوية الوطنية – الوجه الخلفي': false,
-    'رخصة القيادة': false,
+  final Map<String, XFile?> _files = {
+    'الهوية الوطنية – الوجه الأمامي': null,
+    'الهوية الوطنية – الوجه الخلفي': null,
+    'رخصة القيادة': null,
+    'استمارة المركبة': null,
   };
+  
+  bool _isSaving = false;
+
+  Future<void> _pickImage(String label) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _files[label] = pickedFile;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
-    final allUploaded = _uploaded.values.every((v) => v);
+    final allUploaded = _files.values.every((v) => v != null);
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20, 0, 20, bottom + 24),
@@ -307,13 +447,12 @@ class _IdentityVerificationBottomSheetState
             ),
           ),
           const SizedBox(height: 20),
-          ..._uploaded.keys.map((label) => Padding(
+          ..._files.keys.map((label) => Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: _UploadTile(
                   label: label,
-                  uploaded: _uploaded[label]!,
-                  onTap: () =>
-                      setState(() => _uploaded[label] = !_uploaded[label]!),
+                  uploaded: _files[label] != null,
+                  onTap: () => _pickImage(label),
                   cs: cs,
                   tt: tt,
                 ),
@@ -321,15 +460,10 @@ class _IdentityVerificationBottomSheetState
           const SizedBox(height: 8),
           ElevatedButton.icon(
             icon: const Icon(Icons.send_outlined),
-            label: const Text('إرسال للمراجعة'),
-            onPressed: allUploaded
-                ? () {
-                    ref
-                        .read(verificationProvider.notifier)
-                        .completeStep(VerificationStep.identity);
-                    Navigator.pop(context);
-                  }
-                : null,
+            label: _isSaving
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('إرسال للمراجعة'),
+            onPressed: (allUploaded && !_isSaving) ? _submitDocs : null,
             style: ElevatedButton.styleFrom(
               disabledBackgroundColor: cs.outlineVariant.withOpacity(0.3),
             ),
@@ -344,6 +478,56 @@ class _IdentityVerificationBottomSheetState
         ],
       ),
     );
+  }
+
+  Future<void> _submitDocs() async {
+    setState(() => _isSaving = true);
+    try {
+      final profileId = authState.profileId;
+      if (profileId != null) {
+        // Upload ID Front
+        final idFrontFile = _files['الهوية الوطنية – الوجه الأمامي']!;
+        final idFrontRes = await SavoraApi.uploadDriverIdFront(await idFrontFile.readAsBytes(), idFrontFile.path.split('/').last);
+        final idFrontUrl = idFrontRes['data']['URL'];
+
+        // Upload ID Back
+        final idBackFile = _files['الهوية الوطنية – الوجه الخلفي']!;
+        final idBackRes = await SavoraApi.uploadDriverIdBack(await idBackFile.readAsBytes(), idBackFile.path.split('/').last);
+        final idBackUrl = idBackRes['data']['URL'];
+
+        // Upload License
+        final licenseFile = _files['رخصة القيادة']!;
+        final licenseRes = await SavoraApi.uploadDriverLicenseFront(await licenseFile.readAsBytes(), licenseFile.path.split('/').last);
+        final licenseUrl = licenseRes['data']['URL'];
+
+        // Upload Vehicle License
+        final vehicleLicenseFile = _files['استمارة المركبة']!;
+        final vehicleLicenseRes = await SavoraApi.uploadDriverVehicleLicense(await vehicleLicenseFile.readAsBytes(), vehicleLicenseFile.path.split('/').last);
+        final vehicleLicenseUrl = vehicleLicenseRes['data']['URL'];
+
+        // Update Driver Profile
+        await SavoraApi.updateDriverProfile(profileId, {
+           'documents': {
+              'id_front': idFrontUrl,
+              'id_back': idBackUrl,
+           },
+           'license': {
+              'front_image': licenseUrl,
+              'vehicle_license_image': vehicleLicenseUrl,
+           }
+        });
+        
+        await SavoraApi.verifyDriverStep(profileId, 'Documents_Status', 'verified');
+        await SavoraApi.verifyDriverStep(profileId, 'Verification_Status', 'pending_review');
+      }
+
+      ref.read(verificationProvider.notifier).completeStep(VerificationStep.identity);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: $e')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }
 
@@ -361,9 +545,10 @@ class AccountReviewBottomSheet extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 8),
           Container(
@@ -423,6 +608,7 @@ class AccountReviewBottomSheet extends ConsumerWidget {
             child: const Text('إغلاق'),
           ),
         ],
+      ),
       ),
     );
   }

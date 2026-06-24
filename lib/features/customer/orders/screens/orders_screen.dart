@@ -1,10 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../core/network/savora_api.dart';
 import '../../../../core/theme/theme_notifier.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../state/providers/auth_provider.dart';
 import 'track_order_screen.dart';
+import 'rating_screen.dart';
 
 const _kAccent = Color(0xFFE8A838);
 const _kAccentLight = Color(0xFFF0B040);
@@ -26,30 +29,18 @@ class _OrdersScreenState extends State<OrdersScreen>
 
   late int _tabIndex;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
-  // ── active order data ──
-  static const _kitchenName = "Grandma's Kitchen";
-  static const _orderNo = 'Order #SVG-90210';
-  static const _eta = '25–35';
-  static const _progressValue = 0.65;
-  static const _activeStep = 1;
+  // ── real order data ──
+  List<Map<String, dynamic>> _orders = [];
+  bool _loadingOrders = true;
+  String? _orderError;
 
   static const List<_Step> _steps = [
     _Step('Placed', Icons.check_circle_rounded),
     _Step('Cooking', Icons.soup_kitchen_rounded),
     _Step('Pickup', Icons.shopping_bag_rounded),
     _Step('Arrival', Icons.home_rounded),
-  ];
-
-  // ── history data ──
-  static const List<_PastOrder> _history = [
-    _PastOrder("Mama's Mahshi", '12 Oct 2023, 14:30', '#SVG-89210', 180,
-        Color(0xFF6B3410), '🍲'),
-    _PastOrder('The Grill Hub', '08 Oct 2023, 20:15', '#SVG-89004', 345,
-        Color(0xFF7A2E1E), '🍢'),
-    _PastOrder('Pizza Palazzo', '05 Oct 2023, 13:05', '#SVG-88762', 210,
-        Color(0xFFC25A2E), '🍕'),
   ];
 
   @override
@@ -64,6 +55,66 @@ class _OrdersScreenState extends State<OrdersScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..forward();
+    _loadOrders();
+  }
+
+  Future<void> _loadOrders() async {
+    final uid = authState.userId;
+    if (uid == null) return;
+    try {
+      final data = await SavoraApi.getCustomerOrders(uid);
+      setState(() {
+        _orders = List<Map<String, dynamic>>.from(data['orders'] ?? []);
+        _loadingOrders = false;
+      });
+    } catch (e) {
+      setState(() {
+        _orderError = e.toString();
+        _loadingOrders = false;
+      });
+    }
+  }
+
+  Map<String, dynamic>? get _activeOrder {
+    final active = _orders.where((o) {
+      final s = (o['order_status'] as String?) ?? '';
+      return !['completed', 'cancelled'].contains(s);
+    }).toList();
+    active.sort((a, b) {
+      final da = DateTime.tryParse(a['createdAt'] as String? ?? '') ?? DateTime(2000);
+      final db = DateTime.tryParse(b['createdAt'] as String? ?? '') ?? DateTime(2000);
+      return db.compareTo(da);
+    });
+    return active.isNotEmpty ? active.first : null;
+  }
+
+  List<Map<String, dynamic>> get _pastOrders {
+    final past = _orders.where((o) {
+      final s = (o['order_status'] as String?) ?? '';
+      return ['completed', 'cancelled'].contains(s);
+    }).toList();
+    past.sort((a, b) {
+      final da = DateTime.tryParse(a['createdAt'] as String? ?? '') ?? DateTime(2000);
+      final db = DateTime.tryParse(b['createdAt'] as String? ?? '') ?? DateTime(2000);
+      return db.compareTo(da);
+    });
+    return past;
+  }
+
+  // Helper: order status → step index
+  int _statusToStep(String status) {
+    switch (status) {
+      case 'accepted':
+        return 1;
+      case 'preparing':
+        return 1;
+      case 'ready':
+        return 2;
+      case 'completed':
+        return 3;
+      default:
+        return 0;
+    }
   }
 
   @override
@@ -279,14 +330,76 @@ class _OrdersScreenState extends State<OrdersScreen>
   // ACTIVE TAB
   // ════════════════════════════════════════════
   List<Widget> _buildActiveTab() {
+    if (_loadingOrders) {
+      return [
+        const SizedBox(height: 80),
+        Center(
+          child: CircularProgressIndicator(color: _kAccentDark),
+        ),
+      ];
+    }
+    if (_orderError != null) {
+      return [
+        const SizedBox(height: 80),
+        Center(
+          child: GestureDetector(
+            onTap: _loadOrders,
+            child: Column(
+              children: [
+                Icon(Icons.error_outline, color: _subTextColor, size: 40),
+                const SizedBox(height: 8),
+                Text('Tap to retry', style: TextStyle(color: _subTextColor)),
+              ],
+            ),
+          ),
+        ),
+      ];
+    }
+    final order = _activeOrder;
+    if (order == null) {
+      return [
+        _reveal(0.12, 0.40, _buildOngoingHeader()),
+        const SizedBox(height: 14),
+        _reveal(0.20, 0.60, _buildEmptyOrders()),
+      ];
+    }
     return [
       _reveal(0.12, 0.40, _buildOngoingHeader()),
       const SizedBox(height: 14),
-      _reveal(0.20, 0.60, _buildOrderCard()),
+      _reveal(0.20, 0.60, _buildOrderCard(order)),
     ];
   }
 
+  int get _activeCount => _orders.where((o) {
+    final s = (o['order_status'] as String?) ?? '';
+    return !['completed', 'cancelled'].contains(s);
+  }).length;
+
+  Widget _buildEmptyOrders() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _fieldBorderColor, width: 0.5),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.shopping_bag_rounded, size: 48, color: _subTextColor),
+          const SizedBox(height: 12),
+          Text('No active orders',
+              style: TextStyle(fontFamily: 'DM Sans', fontSize: 15, color: _subTextColor)),
+          const SizedBox(height: 4),
+          Text('Browse dishes and place your first order!',
+              style: TextStyle(fontFamily: 'DM Sans', fontSize: 12, color: _subTextColor)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOngoingHeader() {
+    final count = _activeCount;
     return Row(
       children: [
         Text(
@@ -299,27 +412,47 @@ class _OrdersScreenState extends State<OrdersScreen>
           ),
         ),
         const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: _kAccent.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            '1 Active',
-            style: TextStyle(
-              fontFamily: 'DM Sans',
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: _kAccentDark,
+        if (count > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _kAccent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '$count Active',
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: _kAccentDark,
+              ),
             ),
           ),
-        ),
       ],
     );
   }
 
-  Widget _buildOrderCard() {
+  Widget _buildOrderCard(Map<String, dynamic> order) {
+    final items = List<Map<String, dynamic>>.from(order['items'] ?? []);
+    final firstItem = items.isNotEmpty ? items.first : <String, dynamic>{};
+    final name = (firstItem['name'] as String?) ?? 'Order';
+    final orderNo = order['_id'] as String? ?? '';
+    final shortId = orderNo.length > 8 ? orderNo.substring(orderNo.length - 8).toUpperCase() : orderNo;
+    final total = (order['total'] as num?)?.toDouble() ?? 0;
+    final status = (order['order_status'] as String?) ?? 'pending';
+    final step = _statusToStep(status);
+    final progress = (step + 1) / _steps.length;
+    final statusLabels = {
+      'pending': 'Pending approval',
+      'accepted': 'Preparing your meal',
+      'preparing': 'Preparing your meal',
+      'ready': 'Ready for pickup',
+      'completed': 'Completed',
+      'cancelled': 'Cancelled',
+    };
+    final statusLabel = statusLabels[status] ?? status;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -357,7 +490,9 @@ class _OrdersScreenState extends State<OrdersScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _kitchenName,
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontSize: 17,
@@ -367,7 +502,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _orderNo,
+                      '#$shortId',
                       style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontSize: 12,
@@ -377,47 +512,6 @@ class _OrdersScreenState extends State<OrdersScreen>
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        _eta,
-                        style: const TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: _kAccentDark,
-                          height: 1.0,
-                        ),
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        'min',
-                        style: TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _kAccentDark,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Est. Arrival',
-                    style: TextStyle(
-                      fontFamily: 'DM Sans',
-                      fontSize: 10,
-                      color: _subTextColor,
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -426,7 +520,7 @@ class _OrdersScreenState extends State<OrdersScreen>
           Row(
             children: [
               Text(
-                'Preparing your meal',
+                statusLabel,
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 13,
@@ -436,7 +530,7 @@ class _OrdersScreenState extends State<OrdersScreen>
               ),
               const Spacer(),
               Text(
-                '${(_progressValue * 100).round()}%',
+                '${(progress * 100).round()}%',
                 style: TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 13,
@@ -447,7 +541,7 @@ class _OrdersScreenState extends State<OrdersScreen>
             ],
           ),
           const SizedBox(height: 16),
-          _buildStepTracker(),
+          _buildStepTracker(step, progress),
           const SizedBox(height: 22),
           _buildTrackButton(),
         ],
@@ -455,8 +549,8 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  Widget _buildStepTracker() {
-    final animated = _progressValue * _progress.value;
+  Widget _buildStepTracker(int activeStep, double progressValue) {
+    final animated = progressValue * _progress.value;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -497,7 +591,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                   for (int i = 0; i < _steps.length; i++)
                     Positioned(
                       left: i * segment,
-                      child: _buildStepDot(i, dotSize),
+                      child: _buildStepDot(i, dotSize, activeStep),
                     ),
                 ],
               ),
@@ -518,8 +612,8 @@ class _OrdersScreenState extends State<OrdersScreen>
                         fontFamily: 'DM Sans',
                         fontSize: 11,
                         fontWeight:
-                            i <= _activeStep ? FontWeight.w700 : FontWeight.w500,
-                        color: i <= _activeStep ? _textColor : _subTextColor,
+                            i <= activeStep ? FontWeight.w700 : FontWeight.w500,
+                        color: i <= activeStep ? _textColor : _subTextColor,
                       ),
                     ),
                   ),
@@ -531,10 +625,10 @@ class _OrdersScreenState extends State<OrdersScreen>
     );
   }
 
-  Widget _buildStepDot(int index, double size) {
-    final done = index < _activeStep;
-    final active = index == _activeStep;
-    final reached = index <= _activeStep;
+  Widget _buildStepDot(int index, double size, int activeStep) {
+    final done = index < activeStep;
+    final active = index == activeStep;
+    final reached = index <= activeStep;
 
     return Container(
       width: size,
@@ -624,9 +718,33 @@ class _OrdersScreenState extends State<OrdersScreen>
   // HISTORY TAB
   // ════════════════════════════════════════════
   List<Widget> _buildHistoryTab() {
+    if (_loadingOrders) {
+      return [
+        const SizedBox(height: 80),
+        Center(
+          child: CircularProgressIndicator(color: _kAccentDark),
+        ),
+      ];
+    }
+    final past = _pastOrders;
+    if (past.isEmpty) {
+      return [
+        const SizedBox(height: 40),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.history_rounded, size: 48, color: _subTextColor),
+              const SizedBox(height: 12),
+              Text('No past orders yet',
+                  style: TextStyle(fontFamily: 'DM Sans', fontSize: 15, color: _subTextColor)),
+            ],
+          ),
+        ),
+      ];
+    }
     return [
-      for (int i = 0; i < _history.length; i++) ...[
-        _reveal(0.10 + i * 0.06, 0.50 + i * 0.06, _buildHistoryCard(_history[i])),
+      for (int i = 0; i < past.length; i++) ...[
+        _reveal(0.10 + i * 0.06, 0.50 + i * 0.06, _buildHistoryCard(past[i])),
         const SizedBox(height: 14),
       ],
       const SizedBox(height: 8),
@@ -634,7 +752,22 @@ class _OrdersScreenState extends State<OrdersScreen>
     ];
   }
 
-  Widget _buildHistoryCard(_PastOrder o) {
+  Widget _buildHistoryCard(Map<String, dynamic> order) {
+    final items = List<Map<String, dynamic>>.from(order['items'] ?? []);
+    final firstItem = items.isNotEmpty ? items.first : <String, dynamic>{};
+    final name = (firstItem['name'] as String?) ?? 'Order';
+    final orderNo = order['_id'] as String? ?? '';
+    final shortId = orderNo.length > 8 ? orderNo.substring(orderNo.length - 8).toUpperCase() : orderNo;
+    final total = (order['total'] as num?)?.toDouble() ?? 0;
+    final createdAt = order['createdAt'] as String? ?? '';
+    final dateStr = createdAt.isNotEmpty
+        ? createdAt.substring(0, 10).split('-').reversed.join('/')
+        : '';
+    final status = (order['order_status'] as String?) ?? '';
+    final isCancelled = status == 'cancelled';
+    final badgeColor = isCancelled ? const Color(0xFFD32F2F) : const Color(0xFF35A853);
+    final badgeLabel = isCancelled ? 'Cancelled' : 'Delivered';
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -655,36 +788,27 @@ class _OrdersScreenState extends State<OrdersScreen>
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // image
               Container(
                 width: 56,
                 height: 56,
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(14)),
-                clipBehavior: Clip.antiAlias,
-                child: Image.asset(
-                  'assets/images/${o.name}.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [o.tone, o.tone.withValues(alpha: 0.65)],
-                      ),
-                    ),
-                    child: Center(
-                        child: Text(o.emoji, style: const TextStyle(fontSize: 26))),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [_kAccent, _kAccentDark],
                   ),
                 ),
+                alignment: Alignment.center,
+                child: const Text('🍽', style: TextStyle(fontSize: 26)),
               ),
               const SizedBox(width: 14),
-              // name + date
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      o.name,
+                      name,
                       style: TextStyle(
                         fontFamily: 'DM Sans',
                         fontSize: 15,
@@ -694,7 +818,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${o.date} · ${o.orderNo}',
+                      '$dateStr · #$shortId',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -707,20 +831,19 @@ class _OrdersScreenState extends State<OrdersScreen>
                 ),
               ),
               const SizedBox(width: 8),
-              // delivered badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF35A853).withValues(alpha: 0.14),
+                  color: badgeColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Delivered',
+                child: Text(
+                  badgeLabel,
                   style: TextStyle(
                     fontFamily: 'DM Sans',
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF35A853),
+                    color: badgeColor,
                   ),
                 ),
               ),
@@ -732,7 +855,7 @@ class _OrdersScreenState extends State<OrdersScreen>
           Row(
             children: [
               Text(
-                'EGP ${o.price}',
+                'EGP ${total.toInt()}',
                 style: const TextStyle(
                   fontFamily: 'DM Sans',
                   fontSize: 15,
@@ -741,48 +864,98 @@ class _OrdersScreenState extends State<OrdersScreen>
                 ),
               ),
               const Spacer(),
-              GestureDetector(
-      onTap: () {
-        HapticFeedback.mediumImpact();
-        Navigator.of(context).push(
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const TrackOrderScreen(),
-            transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
-            transitionDuration: const Duration(milliseconds: 350),
-          ),
-        );
-      },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: [_kAccentLight, _kAccentDark]),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _kAccent.withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF2C1810)),
-                      SizedBox(width: 6),
-                      Text(
-                        'Reorder',
-                        style: TextStyle(
-                          fontFamily: 'DM Sans',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF2C1810),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (order['rating'] == null && !isCancelled)
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => RatingScreen(
+                              orderId: orderNo,
+                              driverId: order['driver_id'] as String?,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [_kAccentLight, _kAccentDark]),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _kAccent.withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.star_rounded, size: 16, color: Color(0xFF2C1810)),
+                            SizedBox(width: 6),
+                            Text(
+                              'Rate',
+                              style: TextStyle(
+                                fontFamily: 'DM Sans',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF2C1810),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
+                  if (order['rating'] == null && !isCancelled)
+                    const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => const TrackOrderScreen(),
+                          transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
+                          transitionDuration: const Duration(milliseconds: 350),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [_kAccentLight, _kAccentDark]),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _kAccent.withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF2C1810)),
+                          SizedBox(width: 6),
+                          Text(
+                            'Reorder',
+                            style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2C1810),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),

@@ -24,7 +24,7 @@ class _BuildYourOwnScreenState extends State<BuildYourOwnScreen>
   late final AnimationController _entrance;
   int _categoryIndex = 0;
 
-  bool _isDarkMode = themeModeNotifier.value == ThemeMode.dark;
+  bool get _isDarkMode => themeModeNotifier.value == ThemeMode.dark;
 
   static const List<String> _categories = ['Grills', 'Sides', 'Dips & Bread'];
 

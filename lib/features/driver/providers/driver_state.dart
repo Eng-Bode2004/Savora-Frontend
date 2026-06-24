@@ -3,6 +3,7 @@ import 'package:savora_app/features/driver/models/order.dart';
 import 'package:savora_app/features/driver/models/notification.dart';
 import 'package:savora_app/features/driver/models/transaction.dart';
 import 'package:savora_app/features/driver/models/dummy_data.dart';
+import 'package:savora_app/core/network/savora_api.dart';
 
 // ── User State (Online status, balance) ────────────────────────────────────────
 class DriverUserState {
@@ -48,18 +49,34 @@ final driverOrdersProvider =
 });
 
 class DriverOrdersNotifier extends StateNotifier<List<DriverOrder>> {
-  DriverOrdersNotifier() : super(mockDriverOrders);
+  DriverOrdersNotifier() : super([]) {
+    fetchAvailableOrders();
+  }
 
-  void acceptOrder(String orderId) {
-    state = state.map((o) {
-      if (o.id == orderId) {
-        return o.copyWith(status: 'active', deliveryStep: 'accepted');
-      }
-      if (o.status == 'active') {
-        return o.copyWith(status: 'available');
-      }
-      return o;
-    }).toList();
+  Future<void> fetchAvailableOrders() async {
+    try {
+      final res = await SavoraApi.getAvailableOrdersForDriver();
+      final orders = (res['orders'] as List<dynamic>?)
+          ?.map((o) => DriverOrder.fromJson(o))
+          .toList() ?? [];
+      state = orders;
+    } catch (_) {}
+  }
+
+  Future<void> acceptOrder(String orderId) async {
+    try {
+      // For testing, assuming dummy driver ID or backend extracts from token
+      await SavoraApi.acceptOrderDriver(orderId, 'driver_id_here');
+      state = state.map((o) {
+        if (o.id == orderId) {
+          return o.copyWith(status: 'active', deliveryStep: 'accepted');
+        }
+        if (o.status == 'active') {
+          return o.copyWith(status: 'available');
+        }
+        return o;
+      }).toList();
+    } catch (_) {}
   }
 
   void rejectOrder(String orderId) {
@@ -74,13 +91,16 @@ class DriverOrdersNotifier extends StateNotifier<List<DriverOrder>> {
         .toList();
   }
 
-  void completeOrder(String orderId) {
-    state = state.map((o) {
-      if (o.id == orderId) {
-        return o.copyWith(status: 'completed', deliveryStep: 'delivered');
-      }
-      return o;
-    }).toList();
+  Future<void> completeOrder(String orderId) async {
+    try {
+      await SavoraApi.deliverOrderDriver(orderId);
+      state = state.map((o) {
+        if (o.id == orderId) {
+          return o.copyWith(status: 'completed', deliveryStep: 'delivered');
+        }
+        return o;
+      }).toList();
+    } catch (_) {}
   }
 }
 
