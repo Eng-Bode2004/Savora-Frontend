@@ -46,3 +46,6 @@ app.*.map.json
 
 # Ignore built APKs in landing_page
 landing_page/app-release.apk
+
+# Ignore presentation notes
+savora_presentation.md
