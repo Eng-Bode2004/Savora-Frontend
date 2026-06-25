@@ -37,13 +37,21 @@ class _CartScreenState extends State<CartScreen>
     )..forward();
     
     cartState.addListener(_onCartStateChanged);
+    themeModeNotifier.addListener(_onThemeChange);
   }
 
   @override
   void dispose() {
+    themeModeNotifier.removeListener(_onThemeChange);
     cartState.removeListener(_onCartStateChanged);
     _entrance.dispose();
     super.dispose();
+  }
+
+  void _onThemeChange() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _onCartStateChanged() {

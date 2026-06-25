@@ -99,12 +99,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1300),
     )..forward();
+    themeModeNotifier.addListener(_onThemeChange);
   }
 
   @override
   void dispose() {
+    themeModeNotifier.removeListener(_onThemeChange);
     _entrance.dispose();
     super.dispose();
+  }
+
+  void _onThemeChange() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   double _t(double start, double end) {

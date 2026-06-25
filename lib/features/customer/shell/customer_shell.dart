@@ -29,6 +29,24 @@ class _CustomerShellState extends State<CustomerShell> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    themeModeNotifier.addListener(_onThemeChange);
+  }
+
+  @override
+  void dispose() {
+    themeModeNotifier.removeListener(_onThemeChange);
+    super.dispose();
+  }
+
+  void _onThemeChange() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(

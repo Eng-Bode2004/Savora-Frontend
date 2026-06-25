@@ -56,6 +56,21 @@ class _OrdersScreenState extends State<OrdersScreen>
       duration: const Duration(milliseconds: 1400),
     )..forward();
     _loadOrders();
+    themeModeNotifier.addListener(_onThemeChange);
+  }
+
+  @override
+  void dispose() {
+    themeModeNotifier.removeListener(_onThemeChange);
+    _entrance.dispose();
+    _progress.dispose();
+    super.dispose();
+  }
+
+  void _onThemeChange() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _loadOrders() async {
@@ -117,12 +132,7 @@ class _OrdersScreenState extends State<OrdersScreen>
     }
   }
 
-  @override
-  void dispose() {
-    _entrance.dispose();
-    _progress.dispose();
-    super.dispose();
-  }
+
 
   double _t(double start, double end) {
     final v = _entrance.value.clamp(start, end);

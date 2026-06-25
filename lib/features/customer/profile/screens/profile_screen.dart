@@ -89,10 +89,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (picked == null) return;
     final bytes = await picked.readAsBytes();
     try {
-      final uploaded = await SavoraApi.uploadCustomerProfileImage(bytes, picked.name);
+      final uploaded =
+          await SavoraApi.uploadCustomerProfileImage(bytes, picked.name);
       final imageUrl = uploaded['url'] as String?;
       if (imageUrl != null && _profileId != null) {
-        await SavoraApi.updateCustomerProfile(profileId: _profileId!, data: {'avatar': imageUrl});
+        await SavoraApi.updateCustomerProfile(
+            profileId: _profileId!, data: {'avatar': imageUrl});
         setState(() => _userAvatar = imageUrl);
       }
     } catch (_) {}
@@ -105,7 +107,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
           decoration: BoxDecoration(
             color: _cardColor,
@@ -145,7 +148,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 style: TextStyle(color: _textColor, fontFamily: 'DM Sans'),
                 decoration: InputDecoration(
                   labelText: 'Name',
-                  labelStyle: TextStyle(color: _subTextColor, fontFamily: 'DM Sans'),
+                  labelStyle:
+                      TextStyle(color: _subTextColor, fontFamily: 'DM Sans'),
                   filled: true,
                   fillColor: _fieldBgColor,
                   border: OutlineInputBorder(
@@ -160,7 +164,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Cancel', style: TextStyle(fontFamily: 'DM Sans', color: _subTextColor)),
+                      child: Text('Cancel',
+                          style: TextStyle(
+                              fontFamily: 'DM Sans', color: _subTextColor)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -170,7 +176,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                         final newName = controller.text.trim();
                         if (newName.isEmpty || _profileId == null) return;
                         try {
-                          await SavoraApi.updateCustomerProfile(profileId: _profileId!, data: {'name': newName});
+                          await SavoraApi.updateCustomerProfile(
+                              profileId: _profileId!, data: {'name': newName});
                           setState(() => _userName = newName);
                         } catch (_) {}
                         Navigator.pop(context);
@@ -178,10 +185,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kAccent,
                         foregroundColor: const Color(0xFF2C1810),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Text('Save', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w700)),
+                      child: const Text('Save',
+                          style: TextStyle(
+                              fontFamily: 'DM Sans',
+                              fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],
@@ -198,12 +209,19 @@ class _ProfileScreenState extends State<ProfileScreen>
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(feature, style: const TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w700)),
-        content: Text('$feature is coming soon!', style: TextStyle(fontFamily: 'DM Sans', color: _subTextColor)),
+        title: Text(feature,
+            style: const TextStyle(
+                fontFamily: 'DM Sans', fontWeight: FontWeight.w700)),
+        content: Text('$feature is coming soon!',
+            style: TextStyle(fontFamily: 'DM Sans', color: _subTextColor)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.w600, color: _kAccent)),
+            child: const Text('OK',
+                style: TextStyle(
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w600,
+                    color: _kAccent)),
           ),
         ],
       ),
@@ -268,16 +286,22 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Color get _bgColor => _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
-  Color get _bgColor2 => _isDarkMode ? AppColors.espresso : const Color(0xFFF7F4EE);
-  Color get _textColor => _isDarkMode ? AppColors.cream : const Color(0xFF1A1410);
-  Color get _subTextColor => _isDarkMode ? AppColors.creamDim : const Color(0xFF8A8A8A);
+  Color get _bgColor =>
+      _isDarkMode ? AppColors.espresso : const Color(0xFFFDFBF7);
+  Color get _bgColor2 =>
+      _isDarkMode ? AppColors.espresso : const Color(0xFFF7F4EE);
+  Color get _textColor =>
+      _isDarkMode ? AppColors.cream : const Color(0xFF1A1410);
+  Color get _subTextColor =>
+      _isDarkMode ? AppColors.creamDim : const Color(0xFF8A8A8A);
   Color get _cardColor => _isDarkMode ? AppColors.glass : Colors.white;
-  Color get _fieldBgColor => _isDarkMode ? AppColors.glass : const Color(0xFFF5F3EF);
+  Color get _fieldBgColor =>
+      _isDarkMode ? AppColors.glass : const Color(0xFFF5F3EF);
   Color get _fieldBorderColor =>
       _isDarkMode ? AppColors.glassBorder : const Color(0xFFE8E4DE);
-  Color get _shadowColor =>
-      _isDarkMode ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.06);
+  Color get _shadowColor => _isDarkMode
+      ? Colors.black.withValues(alpha: 0.3)
+      : Colors.black.withValues(alpha: 0.06);
 
   @override
   Widget build(BuildContext context) {
@@ -292,7 +316,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: _isDarkMode ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      value:
+          _isDarkMode ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: _bgColor,
         body: Directionality(
@@ -310,17 +335,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             _reveal(0.0, 0.22, _buildTopBar()),
                             const SizedBox(height: 20),
                             _reveal(0.05, 0.32, _buildProfileHeader()),
                             const SizedBox(height: 28),
-                            _reveal(0.12, 0.40, _buildSectionLabel('My Account')),
+                            _reveal(
+                                0.12, 0.40, _buildSectionLabel('My Account')),
                             const SizedBox(height: 10),
                             _reveal(0.16, 0.48, _buildAccountSection()),
                             const SizedBox(height: 24),
-                            _reveal(0.24, 0.52, _buildSectionLabel('Preferences')),
+                            _reveal(
+                                0.24, 0.52, _buildSectionLabel('Preferences')),
                             const SizedBox(height: 10),
                             _reveal(0.28, 0.60, _buildPreferencesSection(l)),
                             const SizedBox(height: 24),
@@ -365,7 +392,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           height: 34,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [_kAccentLight, _kAccentDark]),
+            gradient:
+                const LinearGradient(colors: [_kAccentLight, _kAccentDark]),
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
@@ -430,7 +458,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               child: ClipOval(
                 child: _userAvatar != null
-                    ? Image.network(_userAvatar!, fit: BoxFit.cover,
+                    ? Image.network(_userAvatar!,
+                        fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => _avatarPlaceholder())
                     : _avatarPlaceholder(),
               ),
@@ -445,11 +474,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                   height: 26,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [_kAccentLight, _kAccentDark]),
+                    gradient: const LinearGradient(
+                        colors: [_kAccentLight, _kAccentDark]),
                     shape: BoxShape.circle,
                     border: Border.all(color: _bgColor, width: 2),
                   ),
-                  child: const Icon(Icons.edit_rounded, size: 12, color: Color(0xFF2C1810)),
+                  child: const Icon(Icons.edit_rounded,
+                      size: 12, color: Color(0xFF2C1810)),
                 ),
               ),
             ),
@@ -457,7 +488,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
         const SizedBox(height: 14),
         Text(
-          _userName.isEmpty ? 'User' : _userName,
+          _userName.isEmpty ? 'Guest' : _userName,
           style: TextStyle(
             fontFamily: 'DM Sans',
             fontSize: 19,
@@ -526,9 +557,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     return _card([
       _tile(Icons.person_outline_rounded, 'Edit Profile', onTap: _editName),
       _divider(),
-      _tile(Icons.location_on_outlined, 'Saved Addresses', onTap: () => _showComingSoon('Saved Addresses')),
+      _tile(Icons.location_on_outlined, 'Saved Addresses',
+          onTap: () => _showComingSoon('Saved Addresses')),
       _divider(),
-      _tile(Icons.credit_card_rounded, 'Payment Methods', onTap: () => _showComingSoon('Payment Methods')),
+      _tile(Icons.credit_card_rounded, 'Payment Methods',
+          onTap: () => _showComingSoon('Payment Methods')),
     ]);
   }
 
@@ -557,7 +590,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           children: [
             Text(_currentLang.flag, style: const TextStyle(fontSize: 16)),
             const SizedBox(width: 6),
-            Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: _subTextColor),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                size: 20, color: _subTextColor),
           ],
         ),
       ),
@@ -652,7 +686,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 15),
         decoration: BoxDecoration(
-          color: const Color(0xFFE0533D).withValues(alpha: _isDarkMode ? 0.16 : 0.08),
+          color: const Color(0xFFE0533D)
+              .withValues(alpha: _isDarkMode ? 0.16 : 0.08),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: const Color(0xFFE0533D).withValues(alpha: 0.4),
@@ -716,7 +751,8 @@ class _LanguageSheet extends StatelessWidget {
     final sheetColor = isDark ? AppColors.espressoSoft : Colors.white;
     final textColor = isDark ? AppColors.cream : const Color(0xFF161618);
     final subColor = isDark ? AppColors.muted : const Color(0xFF8A8A8A);
-    final fieldBorder = isDark ? AppColors.glassBorder : const Color(0xFFE8E4DE);
+    final fieldBorder =
+        isDark ? AppColors.glassBorder : const Color(0xFFE8E4DE);
     final tileBg = isDark ? AppColors.glass : const Color(0xFFF5F3EF);
 
     return Container(
@@ -761,14 +797,17 @@ class _LanguageSheet extends StatelessWidget {
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: selected
                       ? _kAccent.withValues(alpha: isDark ? 0.16 : 0.10)
                       : tileBg,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: selected ? _kAccent.withValues(alpha: 0.5) : fieldBorder,
+                    color: selected
+                        ? _kAccent.withValues(alpha: 0.5)
+                        : fieldBorder,
                     width: selected ? 1.4 : 0.5,
                   ),
                 ),
